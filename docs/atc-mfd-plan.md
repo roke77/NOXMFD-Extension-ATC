@@ -116,15 +116,16 @@ Each item is a feature request against `roke77/NOXMFD` itself — a separate PR/
 repo, not something buildable from this extension's own source, following the same boundary every
 other NOXMFD extension already respects (EXTENSIONS.md: extensions never edit NOXMFD's own code).
 
-- **(a) Fuel — squad-only, not a telemetry field.** Revised after investigation on the NOXMFD side
-  (`roke77/NOXMFD` `docs/atc-extension-support.md`, item 1): `GetFuelLevel()` only works for the
-  local player's own aircraft — a non-local aircraft's `FuelTank` component is disabled entirely
-  (`aircraft.LocalSim` gate), so its fuel reading is simply wrong, not approximate. The game has no
-  networked "current fuel" value for any aircraft besides the one the reading player is flying.
-  Fuel now travels player-to-player over NOXMFD's existing squadron transport instead — which also
-  narrows the column from **friendly** to **squad**: only aircraft flown by a pilot in the ATC
-  controller's own squad ever show a fuel number; every other row, friendly or not, always shows
-  `—`. Decision 5 below is updated to match.
+- **(a) Fuel — built, faction-wide peer broadcast, not a telemetry field.** `GetFuelLevel()` only
+  works for the local player's own aircraft — a non-local aircraft's `FuelTank` component is
+  disabled entirely (`aircraft.LocalSim` gate), so its fuel reading is simply wrong, not
+  approximate; the game has no networked "current fuel" value for any aircraft besides the one the
+  reading player is flying (`roke77/NOXMFD` `docs/atc-extension-support.md`, item 1). Fuel now
+  travels player-to-player over NOXMFD's existing squadron transport instead
+  (`FuelBroadcast.cs`) — faction-wide, the same way `Presence.cs`'s own "I'm running NOXMFD" beacon
+  already reaches every faction-mate, not narrowed to squad. Lands on the wire as `"pf"` on each
+  contact (`-1` = no data yet/pilot not broadcasting), which is exactly the original **friendly**
+  scope the ticket asked for.
 - **(b) Per-instance icon color/ring override.** A new `Api` surface keyed by unit id (e.g.
   `SetUnitColorOverride(id, hex)` or a ring-only variant, alongside the existing type-keyed
   overrides), plus a MAP.js change to draw it layered over the existing faction/type icon rather
@@ -153,13 +154,14 @@ other NOXMFD extension already respects (EXTENSIONS.md: extensions never edit NO
    implication that faction stays visible alongside the status ring. `UnitInfo.Faction`
    (`TelemetrySnapshot.cs:529`) is already present per row, so this needs no new telemetry — just
    no client-side faction filter in Phase 1.
-5. **Fuel is squad-only, always** (Phase 2; revised from "friendly-only" — see phasing item (a)).
-   No networked value exists for another aircraft's true current fuel, so it can't come through
-   telemetry at all — the only accurate source is each pilot's own NOXMFD instance, shared with
-   their squad over the existing squadron transport. A friendly aircraft outside the controller's
-   own squad shows `—` for fuel, same as an enemy or neutral row — this is narrower than the
-   original "friendly-only" framing in [Data-visibility model](#data-visibility-model), not a
-   relaxation of it.
+5. **Fuel is friendly-only, always — built as a peer broadcast, not telemetry** (Phase 2; see
+   phasing item (a)). No networked value exists for another aircraft's true current fuel, so it
+   can't come through the normal telemetry read the way SPD/ALT/HDG do — instead each pilot's own
+   NOXMFD instance broadcasts its own accurate reading to the whole faction over the existing
+   squadron transport (`FuelBroadcast.cs`, wire key `"pf"`). Net result matches
+   [Data-visibility model](#data-visibility-model)'s original friendly-only framing exactly — an
+   enemy or neutral row still always shows `—`, and a friendly row shows `—` only if that pilot
+   isn't running NOXMFD or hasn't broadcast within the freshness window yet.
 6. **Phase 1 ships without aircraft-only filtering.** No per-contact tag exists to filter on today
    (decision — see feasibility row 7); rather than approximate it with an unreliable heuristic,
    Phase 1 shows every detected contact type and Phase 2 adds the real flag (item (d), reusing

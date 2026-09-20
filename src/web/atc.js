@@ -22,6 +22,14 @@ function fmtHdg(deg) {
   return Math.round(((deg % 360) + 360) % 360) + '°';
 }
 
+// u.pf is -1 for "no data" (docs/atc-mfd-plan.md decision 5 / NOXMFD's docs/atc-extension-support.md
+// item 1) — a peer-broadcast value, only ever present for a faction-mate whose own NOXMFD instance
+// is both running and within the broadcast's freshness window; an enemy contact can never carry
+// one at all (FuelBroadcast only reaches the local player's own faction roster in the first place).
+function fmtFuel(pf) {
+  return typeof pf === 'number' && pf >= 0 ? Math.round(pf * 100) + '%' : '—';
+}
+
 function factionClass(f) {
   return f === 1 ? 'f-friendly' : f === 2 ? 'f-enemy' : 'f-neutral';
 }
@@ -97,7 +105,7 @@ function render() {
       '<span class="atc-c-spd">' + (u.hd && u.sp ? u.sp : '—') + '</span>' +
       '<span class="atc-c-hdg">' + (u.hd && typeof u.h === 'number' ? fmtHdg(u.h) : '—') + '</span>' +
       '<span class="atc-c-dist">' + fmtRng(dist, d.metric) + '</span>' +
-      '<span class="atc-c-fuel">—</span>';
+      '<span class="atc-c-fuel">' + fmtFuel(u.pf) + '</span>';
     row.addEventListener('click', () => selectRow(u.id));
     rowsEl.appendChild(row);
   }
