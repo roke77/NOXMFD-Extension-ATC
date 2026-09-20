@@ -34,11 +34,37 @@ Requirements, as written:
 | # | Requirement | Status | Notes |
 |---|---|---|---|
 | 1 | Traffic table | Partial | `UnitInfo` (`TelemetrySnapshot.cs:522-578`, serialized by `TelemetryJson.cs`'s `UnitsArray`) already carries a stable id, unit type, position, heading, faction, `PilotName`, and `SpeedReading`/`AltReading` (only when `HasDetail`). No field maps cleanly to "Callsign" (resolved as `PilotName`, see decisions), and there's no per-unit fuel or distance field. |
-| 2 | Fuel | Missing — needs a NOXMFD core change | `TelemetryReader.cs:874` reads fuel (`aircraft.GetFuelLevel()`) only for the local player's own aircraft; `TelemetrySnapshot.Fuel` is one top-level `float`, not an array. `UnitInfo` has no fuel field for any other unit. |
+| 2 | Fuel | Missing — needs a NOXMFD core change | `TelemetryReader.cs:874` reads fuel (`aircraft.GetFuelLevel()`) only for the local player's own aircraft; `TelemetrySnapshot.Fuel` is one top-level `float`, not an array. `UnitInfo` has no fuel field for any other unit. Also needs its own visibility gate — see [Data-visibility model](#data-visibility-model) and decision 5. |
 | 3 | Distance / range presets | Partial — pattern exists, anchor doesn't | No server-side "reference position" concept exists anywhere. TGT's own RNG column computes range client-side against the local player's `WorldX/WorldZ` (`telemetry-source.js:333-335`, formatted by `range-format.js:5-9`). The same client-side formula covers range presets directly — resolved to use that same local-player anchor, see decisions. |
 | 4 | ATC Status assignment | Supported today, no core change | Pure bookkeeping — doesn't touch the aircraft. The extension can own an in-memory `Dictionary<unitId, status>` and publish it back through its own `NOXMFD.Api.PublishSlice`, keyed by `UnitInfo.Id` (`TelemetrySnapshot.cs:524`, `Unit.persistentID.Id` — stable across frames). |
 | 5 | Two-way MAP ↔ ATC selection | Missing — needs a NOXMFD core change | MAP's click-to-select is local-only client state (`map.js:1200`, `selectAt`) — never sent to the server, never broadcast anywhere. The only existing "selected/focused unit" concept, `TargetFocus.cs` / `TelemetrySnapshot.FocusedTargetId`, tracks a *weapon lock*, is read-only from JS, and has no `Api` method to set it from outside. |
 | 6 | Per-instance status ring on MAP | Missing — needs a NOXMFD core change | `Api.cs`'s only coloring surface (`SetFactionColorOverride`/`SetUnitTypeColorOverride`) keys by unit **type** string, optionally filtered by faction (`IconColorRegistry.cs:64-98`) — there's no per-unit-id override anywhere. |
+
+## Data-visibility model
+
+Since the traffic table shows all factions (decision 4), checked what NOXMFD's telemetry already
+restricts for enemy/neutral contacts, so nothing in this extension leaks data a real ATC
+controller couldn't have.
+
+NOXMFD has exactly **one** faction-sensitive gate today: fog-of-war / lock freshness. `HasDetail`
+(`TelemetryReader.cs:1624`: `(u is Aircraft || u is Missile) && !stale`) is what blanks
+`SpeedReading`/`AltReading` for a contact — and `stale` (`TelemetryReader.cs:1610`) only ever
+applies to enemies, derived from the faction HQ's own tracking database (`datalink`,
+`TelemetryReader.cs:1603`, itself enemy-only). Position/heading pass through the same gate
+(`TryGetKnownPosition`, `TelemetryReader.cs:1586` — the game's own fog-of-war resolution, same one
+the native HUD/radar blip uses). Once a contact clears that gate — i.e. it's actively sensor-locked,
+not stale — SPD/ALT/HDG show identically regardless of faction, which is realistic: you can infer
+kinematics from an active radar lock.
+
+`PilotName` (the Callsign column, decision 1) is **explicitly not** faction-gated beyond that same
+check — confirmed intentional by a comment at `TelemetrySnapshot.cs:557-561` ("works on enemy
+aircraft too"). So Phase 1's existing columns (Callsign, SPD/ALT/HDG, position-derived distance)
+need no new restriction — they already inherit the correct, existing trust model as-is.
+
+**Fuel doesn't fit that model.** Speed/altitude/heading are things a lock plausibly reveals; a
+fuel quantity isn't observable by radar or visual tracking the way kinematics are. Reusing the
+`HasDetail` gate for fuel (Phase 2) would let a locked enemy's fuel show, which is the leak
+flagged during planning — see decision 5.
 
 ## Recommended phasing
 
@@ -72,7 +98,9 @@ other NOXMFD extension already respects (EXTENSIONS.md: extensions never edit NO
 - **(a) Per-unit fuel in telemetry.** Extend `UnitInfo`/`TelemetryReader` to read fuel for every
   aircraft, not just the local player's (`TelemetryReader.cs:874` is local-player-only today).
   Needs confirming first whether `GetFuelLevel()` (or an equivalent) is even readable against a
-  non-local `Aircraft` component before committing to the design.
+  non-local `Aircraft` component before committing to the design. **Gated friendly-only** (decision
+  5) — unlike `SpeedReading`/`AltReading`, this does not reuse the `HasDetail` gate; an enemy or
+  neutral row always shows `—` for fuel regardless of lock state.
 - **(b) Per-instance icon color/ring override.** A new `Api` surface keyed by unit id (e.g.
   `SetUnitColorOverride(id, hex)` or a ring-only variant, alongside the existing type-keyed
   overrides), plus a MAP.js change to draw it layered over the existing faction/type icon rather
@@ -96,8 +124,11 @@ other NOXMFD extension already respects (EXTENSIONS.md: extensions never edit NO
    ticket never states a scope; "detected aircraft" is read literally, matching section 5's
    implication that faction stays visible alongside the status ring. `UnitInfo.Faction`
    (`TelemetrySnapshot.cs:529`) is already present per row, so this needs no new telemetry — just
-   no client-side faction filter in Phase 1 (a toggle can be added later if an all-factions table
-   turns out to leak information an ATC player shouldn't have, e.g. enemy fuel once Phase 2 adds it).
+   no client-side faction filter in Phase 1.
+5. **Fuel is friendly-only, always** (Phase 2). Unlike SPD/ALT/HDG, fuel isn't something a radar
+   lock plausibly reveals, so it doesn't reuse the existing `HasDetail` gate — see
+   [Data-visibility model](#data-visibility-model). An enemy or neutral row shows `—` for fuel even
+   while actively sensor-locked.
 
 ## What's built
 
