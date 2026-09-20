@@ -53,6 +53,8 @@ visual or selection integration yet.
   exact formula, no new anchor UI needed). **Fuel column shows `—` for every row** — no per-unit
   data exists yet; the column stays in the layout so Phase 2 can fill it in without a table
   redesign.
+- **Rows**: every detected unit across all factions (decision 4) — no friendly-only filter.
+  `UnitInfo.Faction` is already in the payload, so the column can show/color by faction for free.
 - **ATC Status**: dropdown on a selected row, backed by an in-memory `Dictionary<unitId, status>`
   inside the extension's own plugin. Resets on plugin reload/session restart by design — not
   persisted (decision 3).
@@ -90,6 +92,12 @@ other NOXMFD extension already respects (EXTENSIONS.md: extensions never edit NO
    column already uses. No settable/fixed anchor, no new UI to place or move one.
 3. **ATC Status is session-only.** The in-memory `Dictionary<unitId, status>` resets on plugin
    reload/session restart. Not persisted to disk.
+4. **Traffic table shows all factions** (friendly, enemy, neutral) — not friendly-only. The
+   ticket never states a scope; "detected aircraft" is read literally, matching section 5's
+   implication that faction stays visible alongside the status ring. `UnitInfo.Faction`
+   (`TelemetrySnapshot.cs:529`) is already present per row, so this needs no new telemetry — just
+   no client-side faction filter in Phase 1 (a toggle can be added later if an all-factions table
+   turns out to leak information an ATC player shouldn't have, e.g. enemy fuel once Phase 2 adds it).
 
 ## What's built
 
