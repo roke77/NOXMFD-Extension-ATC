@@ -6,10 +6,10 @@
 
 Adds an **ATC** page under [NOXMFD](https://github.com/roke77/NOXMFD)'s EXT nav — a
 traffic-management / flight-progress MFD for a player acting as Air Traffic Control, per
-[issue #89](https://github.com/roke77/NOXMFD/issues/89). Phase 1 (see
-[`docs/atc-mfd-plan.md`](docs/atc-mfd-plan.md)): the traffic table, range presets, and ATC Status
-assignment. Fuel, MAP integration, and aircraft-only filtering need NOXMFD core changes first
-(Phase 2, also in that doc) and aren't built yet.
+[issue #89](https://github.com/roke77/NOXMFD/issues/89). The traffic table, range presets, ATC
+Status assignment, fuel, aircraft-only filtering, a per-unit MAP status ring, and LOCATE ON MAP are
+all built — see [`docs/atc-mfd-plan.md`](docs/atc-mfd-plan.md) for the full design and its one
+remaining gap (two-way MAP↔ATC selection sync, left as a future exploration).
 
 Built entirely through NOXMFD's public extension API — see NOXMFD's
 [`EXTENSIONS.md`](https://github.com/roke77/NOXMFD/blob/main/EXTENSIONS.md). This repo does

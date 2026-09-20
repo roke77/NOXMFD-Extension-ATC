@@ -45,23 +45,21 @@ rangeBtnsEl.addEventListener('click', (e) => {
 
 locateBtnEl.addEventListener('click', () => {
   if (!selectedId) return;
-  fetch('/ext/atc/command', {
-    method: 'POST',
-    body: JSON.stringify({ cmd: 'locate', id: selectedId }),
-  });
+  postCommand({ cmd: 'locate', id: selectedId });
 });
 
 statusSelectEl.addEventListener('change', () => {
   if (!selectedId) return;
-  fetch('/ext/atc/command', {
-    method: 'POST',
-    body: JSON.stringify({ cmd: 'set-status', id: selectedId, status: statusSelectEl.value }),
-  });
+  postCommand({ cmd: 'set-status', id: selectedId, status: statusSelectEl.value });
   // Optimistic local update — the next frame's published slice will confirm/overwrite this, but
   // there's no reason to wait a tick to reflect the pilot's own click.
   statusById[selectedId] = statusSelectEl.value;
   render();
 });
+
+function postCommand(payload) {
+  fetch('/ext/atc/command', { method: 'POST', body: JSON.stringify(payload) });
+}
 
 function selectRow(id) {
   selectedId = selectedId === id ? 0 : id;

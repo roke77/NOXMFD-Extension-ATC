@@ -1,4 +1,4 @@
-/* ATC page — Phase 1 (docs/atc-mfd-plan.md). Green-phosphor MFD theme via the shared --no-*
+/* ATC page (docs/atc-mfd-plan.md). Green-phosphor MFD theme via the shared --no-*
    tokens; faction accents (friendly blue / enemy red) echo TGT's own tgt.css, which is why this
    defines its own --atc-blue rather than reading --no-blue (that token is a different, mod-only
    decorative accent — see tgt.css's own comment on --tgt-blue). */
@@ -134,8 +134,7 @@ html, body {
 
 /* ── Footer: SELECTED / STATUS dropdown / LOCATE ON MAP ───────────────────────────────────
    The ticket's own mockup ("SELECTED: ACE01  STATUS: [ APPROACH ▼ ]", issue #89 section 2).
-   LOCATE ON MAP is drawn but disabled — it needs the shared-selection Api NOXMFD doesn't have
-   yet (docs/atc-mfd-plan.md Phase 2, item (c)). */
+   LOCATE ON MAP is disabled until a row is selected (atc.js's updateFooter). */
 .atc-footer {
   flex: 0 0 auto;
   display: flex; align-items: center;
@@ -170,11 +169,11 @@ html, body {
   padding: clamp(5px, 1.2vh, 10px) clamp(8px, 1.6vw, 14px);
   font-size: clamp(9px, 1.6vmin, 13px);
   letter-spacing: 0.03em;
-  cursor: not-allowed;
+  cursor: pointer;
   white-space: nowrap;
   flex: 0 0 auto;
 }
-.atc-locate-btn:disabled { color: var(--no-green-dark); border-color: var(--no-green-dark); }
+.atc-locate-btn:disabled { color: var(--no-green-dark); border-color: var(--no-green-dark); cursor: not-allowed; }
 
 /* No-mission state — shared .mfd-empty (theme.css), same convention MAP/other simple pages use. */
 #no-mission { display: none; }
