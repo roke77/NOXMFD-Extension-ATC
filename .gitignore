@@ -5,3 +5,6 @@ obj/
 
 # Local machine-specific game path override (see AtcModule.csproj)
 GameDir.props
+
+# Ad-hoc release artifacts (build zips, release notes drafts) — never committed.
+_scratch/
