@@ -2,10 +2,13 @@
 
 ## Status
 
-Planning — nothing built yet. This records a feasibility pass of
+Phase 1 and Phase 2 are both built, against NOXMFD 0.52.0 (`lib\NOXMFD.dll`, `BepInDependency`
+pinned to `0.52.0`). This records a feasibility pass of
 [roke77/NOXMFD#89](https://github.com/roke77/NOXMFD/issues/89) against NOXMFD's actual telemetry
-and extension API (as of NOXMFD 0.51.1), lays out a phased plan, and records the design decisions
-below. Phase 1 is ready to start.
+and extension API, lays out a phased plan, and records the design decisions below. See
+[What's built](#whats-built) for current state; the one requirement not built is two-way MAP↔ATC
+selection sync (ticket requirement 4's other direction), left as a future exploration — see
+decision 7.
 
 ## Source ticket
 
@@ -34,12 +37,12 @@ Requirements, as written:
 | # | Requirement | Status | Notes |
 |---|---|---|---|
 | 1 | Traffic table | Partial | `UnitInfo` (`TelemetrySnapshot.cs:522-578`, serialized by `TelemetryJson.cs`'s `UnitsArray`) already carries a stable id, unit type, position, heading, faction, `PilotName`, and `SpeedReading`/`AltReading` (only when `HasDetail`). No field maps cleanly to "Callsign" (resolved as `PilotName`, see decisions), and there's no per-unit fuel or distance field. |
-| 2 | Fuel | Missing — needs a NOXMFD core change | `TelemetryReader.cs:874` reads fuel (`aircraft.GetFuelLevel()`) only for the local player's own aircraft; `TelemetrySnapshot.Fuel` is one top-level `float`, not an array. `UnitInfo` has no fuel field for any other unit. Also needs its own visibility gate — see [Data-visibility model](#data-visibility-model) and decision 5. |
+| 2 | Fuel | Built (Phase 2) | Not a telemetry field — `FuelBroadcast.cs` peer-broadcasts each pilot's own live fuel faction-wide; lands as `"pf"` per contact. See phasing item (a) and decision 5. |
 | 3 | Distance / range presets | Partial — pattern exists, anchor doesn't | No server-side "reference position" concept exists anywhere. TGT's own RNG column computes range client-side against the local player's `WorldX/WorldZ` (`telemetry-source.js:333-335`, formatted by `range-format.js:5-9`). The same client-side formula covers range presets directly — resolved to use that same local-player anchor, see decisions. |
 | 4 | ATC Status assignment | Supported today, no core change | Pure bookkeeping — doesn't touch the aircraft. The extension can own an in-memory `Dictionary<unitId, status>` and publish it back through its own `NOXMFD.Api.PublishSlice`, keyed by `UnitInfo.Id` (`TelemetrySnapshot.cs:524`, `Unit.persistentID.Id` — stable across frames). |
-| 5 | Two-way MAP ↔ ATC selection | Missing — needs a NOXMFD core change | MAP's click-to-select is local-only client state (`map.js:1200`, `selectAt`) — never sent to the server, never broadcast anywhere. The only existing "selected/focused unit" concept, `TargetFocus.cs` / `TelemetrySnapshot.FocusedTargetId`, tracks a *weapon lock*, is read-only from JS, and has no `Api` method to set it from outside. |
-| 6 | Per-instance status ring on MAP | Missing — needs a NOXMFD core change | `Api.cs`'s only coloring surface (`SetFactionColorOverride`/`SetUnitTypeColorOverride`) keys by unit **type** string, optionally filtered by faction (`IconColorRegistry.cs:64-98`) — there's no per-unit-id override anywhere. |
-| 7 | Aircraft-only filtering | Missing — needs a NOXMFD core change | The `contacts` array (`UnitInfo`) carries no per-contact "is this an aircraft" tag. One already exists server-side, just not exposed there: HSD's own `BuildHsd` (`TelemetryReader.cs:1352-1353`) filters with `u.definition.typeIdentity.air <= 0.5f` — the game's own native classification score. See decision 6. |
+| 5 | MAP ↔ ATC selection | Built, one-way only (extension → MAP) | MAP's click-to-select is a real `target.select` weapon command (`map.js:1224-1238`, `selectAt`), not local UI state — ruled out reusing it for the write side of a two-way sync. `Api.SetSelectedUnit(id)` / `SharedSelection.cs` gives MAP a highlight ring it reads every frame; nothing writes back from a MAP click. Two-way is a future exploration — decision 7. |
+| 6 | Per-instance status ring on MAP | Built (Phase 2) | `Api.SetUnitColorOverride(id, hex)` / `ClearUnitColorOverride(id)`, keyed by unit id, layered over the existing faction/type icon. `AtcStatus.cs` calls it on every status change. See phasing item (b) and decision 6. |
+| 7 | Aircraft-only filtering | Built (Phase 2) | `UnitInfo.IsAircraft` (wire key `"ac"`) reuses HSD's own `BuildHsd` check (`u.definition.typeIdentity.air <= 0.5f`, `TelemetryReader.cs:1352-1353`). `atc.js` filters the table to `u.ac` rows. See phasing item (d). |
 
 ## Data-visibility model
 
@@ -112,9 +115,11 @@ visual or selection integration yet.
 
 ### Phase 2 — needs new NOXMFD core surface
 
-Each item is a feature request against `roke77/NOXMFD` itself — a separate PR/release in the main
+Each item was a feature request against `roke77/NOXMFD` itself — a separate PR/release in the main
 repo, not something buildable from this extension's own source, following the same boundary every
 other NOXMFD extension already respects (EXTENSIONS.md: extensions never edit NOXMFD's own code).
+All four shipped in NOXMFD 0.52.0 and are now wired up on this side — see
+[What's built](#whats-built).
 
 - **(a) Fuel — built, faction-wide peer broadcast, not a telemetry field.** `GetFuelLevel()` only
   works for the local player's own aircraft — a non-local aircraft's `FuelTank` component is
@@ -126,19 +131,19 @@ other NOXMFD extension already respects (EXTENSIONS.md: extensions never edit NO
   already reaches every faction-mate, not narrowed to squad. Lands on the wire as `"pf"` on each
   contact (`-1` = no data yet/pilot not broadcasting), which is exactly the original **friendly**
   scope the ticket asked for.
-- **(b) Per-instance icon color/ring override.** A new `Api` surface keyed by unit id (e.g.
-  `SetUnitColorOverride(id, hex)` or a ring-only variant, alongside the existing type-keyed
-  overrides), plus a MAP.js change to draw it layered over the existing faction/type icon rather
-  than replacing it.
-- **(c) A shared, extension-writable "selected unit" concept.** A new `Api` method pair (e.g.
-  `SetSelectedUnit(id)` plus a way to read the current selection) that both MAP.js and any
-  extension can read and write, so LOCATE ON MAP and MAP → ATC sync both go through one mechanism.
-  `TargetFocus.cs` is the closest existing analog but is lock-specific and read-only — this needs
-  its own, more general concept rather than repurposing it.
-- **(d) A real aircraft-classification flag on `UnitInfo`.** Not a new design — `BuildHsd` already
-  filters aircraft this way for HSD's own contact list (`u.definition.typeIdentity.air <= 0.5f`,
-  `TelemetryReader.cs:1352-1353`). Exposing the same check as an `IsAircraft` (or similar) field on
-  the main `contacts`/`UnitInfo` array is a small, low-risk addition, not novel classification work.
+- **(b) Per-instance icon color/ring override — built.** `Api.SetUnitColorOverride(id, hex)` /
+  `ClearUnitColorOverride(id)`, layered over the existing faction/type icon. `AtcStatus.cs` calls it
+  whenever a status changes, keyed off the assigned status (decision 6).
+- **(c) A shared, extension-writable "selected unit" concept — built, one-way only.**
+  `Api.SetSelectedUnit(id)` lets an extension tell MAP to highlight a unit; MAP reads it every frame
+  and draws a ring. NOXMFD shipped this deliberately one-way (extension → MAP) — MAP's own
+  click-to-select issues a real `target.select` weapon command, so there's no safe way to repurpose
+  it as the write side of a two-way sync. LOCATE ON MAP (ticket requirement 4, first half) uses this;
+  the reverse direction (a MAP click selecting the matching ATC row) isn't buildable against what
+  shipped — see decision 7.
+- **(d) A real aircraft-classification flag on `UnitInfo` — built.** `IsAircraft` (wire key `"ac"`)
+  reuses the same check `BuildHsd` already used for HSD's own contact list
+  (`u.definition.typeIdentity.air <= 0.5f`). `atc.js` now filters the table to `u.ac` rows.
 
 ## Design decisions
 
@@ -162,33 +167,42 @@ other NOXMFD extension already respects (EXTENSIONS.md: extensions never edit NO
    [Data-visibility model](#data-visibility-model)'s original friendly-only framing exactly — an
    enemy or neutral row still always shows `—`, and a friendly row shows `—` only if that pilot
    isn't running NOXMFD or hasn't broadcast within the freshness window yet.
-6. **Phase 1 ships without aircraft-only filtering.** No per-contact tag exists to filter on today
-   (decision — see feasibility row 7); rather than approximate it with an unreliable heuristic,
-   Phase 1 shows every detected contact type and Phase 2 adds the real flag (item (d), reusing
-   HSD's own existing `typeIdentity.air` check server-side).
+6. **Aircraft-only filtering — built in Phase 2, reusing HSD's own check.** No per-contact tag
+   existed at Phase 1 time; rather than approximate it with an unreliable heuristic, Phase 1 shipped
+   showing every contact type and Phase 2 added the real flag (item (d), reusing HSD's own existing
+   `typeIdentity.air` check server-side) once NOXMFD exposed it.
+7. **Two-way MAP ↔ ATC selection sync is a future exploration, not built.** The ticket's requirement
+   4 asked for both directions. NOXMFD's `SetSelectedUnit`/`SharedSelection` (item (c)) was
+   deliberately built one-way, because MAP's click is a real `target.select` weapon command, not
+   free UI state — writing MAP's own click into that same channel risked firing that command by
+   accident. LOCATE ON MAP (ATC → MAP) is built on the one-way channel as-is. Getting the reverse
+   direction (MAP → ATC) would need its own, separate NOXMFD core concept — deliberately left open
+   rather than designed now.
 
 ## What's built
 
-**Status**: Phase 1 built, layout-verified against synthetic data. Not yet checked in-game.
+**Status**: Phase 1 and Phase 2 both built (except two-way MAP → ATC sync, decision 7 — future
+exploration). Layout-verified against synthetic data. Not yet checked in-game.
 
 | File | What |
 |---|---|
-| [`src/plugin/Plugin.cs`](../src/plugin/Plugin.cs) | Registers the **ATC** EXT page with a command handler (`AtcStatus.HandleCommand`). |
-| [`src/plugin/AtcStatus.cs`](../src/plugin/AtcStatus.cs) | The session-only `unitId → status` map (decision 3), the `set-status` command handler (validates against the ticket's own 12-value enum), and the push back to every connected pane via `NOXMFD.Api.PublishSlice`. |
-| [`src/web/atc.js`](../src/web/atc.js) | Opens its own `TelemetrySource` (see [Telemetry wiring](#telemetry-wiring)), renders the table (sorted by distance, faction-tinted per TGT's own convention), range-preset filtering, row selection, and posts status changes to `/ext/atc/command`. |
+| [`src/plugin/Plugin.cs`](../src/plugin/Plugin.cs) | Registers the **ATC** EXT page with a command handler (`AtcStatus.HandleCommand`). `BepInDependency` pinned to NOXMFD `0.52.0` — the release `Api.SetUnitColorOverride`/`ClearUnitColorOverride`/`SetSelectedUnit` and the `"ac"`/`"pf"` contact fields shipped in. |
+| [`src/plugin/AtcStatus.cs`](../src/plugin/AtcStatus.cs) | The session-only `unitId → status` map (decision 3), the `set-status` and `locate` command handlers, the push back to every connected pane via `NOXMFD.Api.PublishSlice`, and the MAP status ring (`Api.SetUnitColorOverride`/`ClearUnitColorOverride`, decision 6) and LOCATE ON MAP (`Api.SetSelectedUnit`, decision 7) calls. |
+| [`src/web/atc.js`](../src/web/atc.js) | Opens its own `TelemetrySource` (see [Telemetry wiring](#telemetry-wiring)), renders the table (sorted by distance, faction-tinted per TGT's own convention, filtered to `u.ac` aircraft), range-preset filtering, row selection, fuel column (`u.pf`), the LOCATE ON MAP button, and posts status/locate commands to `/ext/atc/command`. |
 | [`src/web/atc.html`](../src/web/atc.html) / [`atc.css`](../src/web/atc.css) | The page itself — header, range-preset bar, table, SELECTED/STATUS/LOCATE ON MAP footer (issue #89's own mockup), and a shared `.mfd-empty` no-mission state. |
+| [`lib/NOXMFD.dll`](../lib/NOXMFD.dll) | Committed prebuilt reference, updated to NOXMFD `0.52.0`. |
 
-Not built this phase (Phase 2, needs core NOXMFD changes first): fuel column (always shows `—`),
-aircraft-only filtering (every contact type shows), LOCATE ON MAP (button renders disabled), and
-MAP → ATC sync.
+Not built: the MAP → ATC half of requirement 4's two-way sync (decision 7) — needs its own,
+separate NOXMFD core concept, deliberately left open rather than designed now.
 
 **Verification performed**:
-- `dotnet build -c Release` — 0 errors.
+- `dotnet build -c Release` — 0 errors, deploys against the real NOXMFD `0.52.0` install.
 - No dev-server harness exists for extension pages (`tools/serve_web.py` only mocks NOXMFD's own
   first-party pages), so the real `atc.html`/`atc.css`/`atc.js` were checked against a synthetic
   `TelemetrySource` stub emitting a fixed six-contact frame (mixed factions, mixed `HasDetail`, an
   `ext.atc` status slice) over a local static server: confirmed faction tinting, the `ext.atc`
   status merge, blank ALT/SPD/HDG when `!hd`, distance sort, range-preset filtering, row selection
   (amber outline, footer SELECTED/STATUS populate and enable), and the always-blank fuel column.
-- Not exercised: the real `/stream` connection, the real `/ext/atc/command` POST round-trip, and
-  the no-mission empty state — all need the actual game running NOXMFD + this extension together.
+- Not exercised: the real `/stream` connection, the real `/ext/atc/command` POST round-trip
+  (status ring / LOCATE ON MAP included), and the no-mission empty state — all need the actual game
+  running NOXMFD + this extension together.

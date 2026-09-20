@@ -24,6 +24,21 @@ namespace AtcModule
 
         private static readonly Dictionary<uint, string> _status = new Dictionary<uint, string>();
 
+        // MAP status ring color (docs/atc-mfd-plan.md Phase 2 item (b)) — reuses NOXMFD's own
+        // theme.css semantic colors (--no-green/--no-amber/--no-red: nominal/caution/alert) rather
+        // than inventing a new palette. HOLDING is the only "caution" state in the ticket's enum;
+        // EMERGENCY is the only alert; every other assigned status reads as normal traffic flow.
+        private const string ColorGreen = "#39FF14";
+        private const string ColorAmber = "#FFAA00";
+        private const string ColorRed = "#FF4040";
+
+        private static string ColorFor(string status) => status switch
+        {
+            "EMERGENCY" => ColorRed,
+            "HOLDING" => ColorAmber,
+            _ => ColorGreen,
+        };
+
         [Serializable]
         private class SetStatusCommand
         {
@@ -40,7 +55,17 @@ namespace AtcModule
             SetStatusCommand? cmd;
             try { cmd = JsonUtility.FromJson<SetStatusCommand>(json); }
             catch (Exception ex) { Plugin.Log?.LogWarning($"[ATC] malformed command: {ex.Message}"); return; }
-            if (cmd == null || cmd.cmd != "set-status" || cmd.id == 0) return;
+            if (cmd == null || cmd.id == 0) return;
+
+            // LOCATE ON MAP (docs/atc-mfd-plan.md Phase 2 item (c)) — one-way, extension -> MAP
+            // only; NOXMFD's SharedSelection has no path back from a MAP click to here.
+            if (cmd.cmd == "locate")
+            {
+                NOXMFD.Api.SetSelectedUnit(cmd.id);
+                return;
+            }
+
+            if (cmd.cmd != "set-status") return;
             if (!Valid.Contains(cmd.status))
             {
                 Plugin.Log?.LogWarning($"[ATC] unknown status '{cmd.status}' for unit {cmd.id}.");
@@ -50,8 +75,16 @@ namespace AtcModule
             // UNKNOWN is the "no assignment" state (issue #89's own default) — drop the entry
             // instead of storing it, so a long session doesn't accumulate UNKNOWN entries for
             // every unit anyone has ever glanced at.
-            if (cmd.status == "UNKNOWN") _status.Remove(cmd.id);
-            else _status[cmd.id] = cmd.status;
+            if (cmd.status == "UNKNOWN")
+            {
+                _status.Remove(cmd.id);
+                NOXMFD.Api.ClearUnitColorOverride(cmd.id);
+            }
+            else
+            {
+                _status[cmd.id] = cmd.status;
+                NOXMFD.Api.SetUnitColorOverride(cmd.id, ColorFor(cmd.status));
+            }
 
             PushStatus();
         }

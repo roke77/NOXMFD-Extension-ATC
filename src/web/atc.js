@@ -1,4 +1,4 @@
-// ATC page — Phase 1 (docs/atc-mfd-plan.md). Opens its own TelemetrySource, the same client-side
+// ATC page (docs/atc-mfd-plan.md). Opens its own TelemetrySource, the same client-side
 // mechanism map.js uses (that module's own header comment: "the ONE EventSource('/stream')... in
 // the whole MFD" describes avoiding a second connection from a co-located pane, not a rule against
 // another PAGE also being a tap) — NOXMFD.Api has no method to fetch contacts into an extension's
@@ -12,6 +12,7 @@ const emptyEl = document.getElementById('list-empty');
 const selectedLineEl = document.getElementById('selected-line');
 const statusSelectEl = document.getElementById('status-select');
 const rangeBtnsEl = document.getElementById('range-btns');
+const locateBtnEl = document.getElementById('locate-btn');
 
 let lastFrame = null;      // the raw frame from the last onFrame — re-rendered on a range change too
 let rangeKm = 0;           // 0 = ALL
@@ -42,6 +43,14 @@ rangeBtnsEl.addEventListener('click', (e) => {
   render();
 });
 
+locateBtnEl.addEventListener('click', () => {
+  if (!selectedId) return;
+  fetch('/ext/atc/command', {
+    method: 'POST',
+    body: JSON.stringify({ cmd: 'locate', id: selectedId }),
+  });
+});
+
 statusSelectEl.addEventListener('change', () => {
   if (!selectedId) return;
   fetch('/ext/atc/command', {
@@ -65,12 +74,14 @@ function updateFooter(contactsById) {
     selectedLineEl.innerHTML = 'SELECTED: <span class="atc-none">NONE</span>';
     statusSelectEl.disabled = true;
     statusSelectEl.value = 'UNKNOWN';
+    locateBtnEl.disabled = true;
     return;
   }
   const status = statusById[selectedId] || 'UNKNOWN';
   selectedLineEl.textContent = 'SELECTED: ' + (u.pn || u.t);
   statusSelectEl.disabled = false;
   statusSelectEl.value = status;
+  locateBtnEl.disabled = false;
 }
 
 function render() {
@@ -82,6 +93,7 @@ function render() {
   const contactsById = {};
   const rows = [];
   for (const u of contacts) {
+    if (!u.ac) continue;
     contactsById[u.id] = u;
     let dist = null;
     if (world) {
