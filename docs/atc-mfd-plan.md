@@ -39,6 +39,7 @@ Requirements, as written:
 | 4 | ATC Status assignment | Supported today, no core change | Pure bookkeeping — doesn't touch the aircraft. The extension can own an in-memory `Dictionary<unitId, status>` and publish it back through its own `NOXMFD.Api.PublishSlice`, keyed by `UnitInfo.Id` (`TelemetrySnapshot.cs:524`, `Unit.persistentID.Id` — stable across frames). |
 | 5 | Two-way MAP ↔ ATC selection | Missing — needs a NOXMFD core change | MAP's click-to-select is local-only client state (`map.js:1200`, `selectAt`) — never sent to the server, never broadcast anywhere. The only existing "selected/focused unit" concept, `TargetFocus.cs` / `TelemetrySnapshot.FocusedTargetId`, tracks a *weapon lock*, is read-only from JS, and has no `Api` method to set it from outside. |
 | 6 | Per-instance status ring on MAP | Missing — needs a NOXMFD core change | `Api.cs`'s only coloring surface (`SetFactionColorOverride`/`SetUnitTypeColorOverride`) keys by unit **type** string, optionally filtered by faction (`IconColorRegistry.cs:64-98`) — there's no per-unit-id override anywhere. |
+| 7 | Aircraft-only filtering | Missing — needs a NOXMFD core change | The `contacts` array (`UnitInfo`) carries no per-contact "is this an aircraft" tag. One already exists server-side, just not exposed there: HSD's own `BuildHsd` (`TelemetryReader.cs:1352-1353`) filters with `u.definition.typeIdentity.air <= 0.5f` — the game's own native classification score. See decision 6. |
 
 ## Data-visibility model
 
@@ -66,6 +67,24 @@ fuel quantity isn't observable by radar or visual tracking the way kinematics ar
 `HasDetail` gate for fuel (Phase 2) would let a locked enemy's fuel show, which is the leak
 flagged during planning — see decision 5.
 
+## Telemetry wiring
+
+`NOXMFD.Api` has no method to fetch the current contacts/position snapshot into an extension's C#
+— `PublishSlice` only pushes data the extension itself computed. To get live contacts (position,
+heading, `PilotName`, faction, `SpeedReading`/`AltReading`) into the ATC page at all, its JS imports
+`/assets/services/telemetry-source.js` and opens its own `TelemetrySource(...).connect()` — the
+exact same mechanism `map.js` uses (`telemetry-source.js:66-140`), reading `d.contacts`/`d.world`
+straight off the frame. Same-origin, no gate, zero new NOXMFD core surface needed.
+
+Worth naming as a real trade-off: `telemetry-source.js` is an internal module (`src/web/services/`),
+not part of the versioned surface `EXTENSIONS.md` documents and `BepInDependency` version-pins
+protect. A future NOXMFD refactor of the wire format could break this extension silently, with no
+version bump to warn it. The alternative — reimplementing NOXMFD's own unit-scanning and
+fog-of-war/trust logic independently in this extension's C# — is worse: far more code, and it would
+bypass the same trust boundary [Data-visibility model](#data-visibility-model) relies on, undoing
+the friendly-only fuel gate's whole point. Taking the dependency on the internal module is the
+better trade.
+
 ## Recommended phasing
 
 ### Phase 1 — extension-only, ships against NOXMFD as it stands today
@@ -79,8 +98,10 @@ visual or selection integration yet.
   exact formula, no new anchor UI needed). **Fuel column shows `—` for every row** — no per-unit
   data exists yet; the column stays in the layout so Phase 2 can fill it in without a table
   redesign.
-- **Rows**: every detected unit across all factions (decision 4) — no friendly-only filter.
+- **Rows**: every detected *contact* across all factions (decision 4) — no friendly-only filter.
   `UnitInfo.Faction` is already in the payload, so the column can show/color by faction for free.
+  **Not filtered to aircraft** (decision 6) — ground/ship/building contacts show up alongside
+  aircraft until Phase 2's real classification flag lands; a known, temporary gap, not a bug.
 - **ATC Status**: dropdown on a selected row, backed by an in-memory `Dictionary<unitId, status>`
   inside the extension's own plugin. Resets on plugin reload/session restart by design — not
   persisted (decision 3).
@@ -110,6 +131,10 @@ other NOXMFD extension already respects (EXTENSIONS.md: extensions never edit NO
   extension can read and write, so LOCATE ON MAP and MAP → ATC sync both go through one mechanism.
   `TargetFocus.cs` is the closest existing analog but is lock-specific and read-only — this needs
   its own, more general concept rather than repurposing it.
+- **(d) A real aircraft-classification flag on `UnitInfo`.** Not a new design — `BuildHsd` already
+  filters aircraft this way for HSD's own contact list (`u.definition.typeIdentity.air <= 0.5f`,
+  `TelemetryReader.cs:1352-1353`). Exposing the same check as an `IsAircraft` (or similar) field on
+  the main `contacts`/`UnitInfo` array is a small, low-risk addition, not novel classification work.
 
 ## Design decisions
 
@@ -129,6 +154,10 @@ other NOXMFD extension already respects (EXTENSIONS.md: extensions never edit NO
    lock plausibly reveals, so it doesn't reuse the existing `HasDetail` gate — see
    [Data-visibility model](#data-visibility-model). An enemy or neutral row shows `—` for fuel even
    while actively sensor-locked.
+6. **Phase 1 ships without aircraft-only filtering.** No per-contact tag exists to filter on today
+   (decision — see feasibility row 7); rather than approximate it with an unreliable heuristic,
+   Phase 1 shows every detected contact type and Phase 2 adds the real flag (item (d), reusing
+   HSD's own existing `typeIdentity.air` check server-side).
 
 ## What's built
 
