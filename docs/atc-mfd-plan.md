@@ -116,12 +116,15 @@ Each item is a feature request against `roke77/NOXMFD` itself — a separate PR/
 repo, not something buildable from this extension's own source, following the same boundary every
 other NOXMFD extension already respects (EXTENSIONS.md: extensions never edit NOXMFD's own code).
 
-- **(a) Per-unit fuel in telemetry.** Extend `UnitInfo`/`TelemetryReader` to read fuel for every
-  aircraft, not just the local player's (`TelemetryReader.cs:874` is local-player-only today).
-  Needs confirming first whether `GetFuelLevel()` (or an equivalent) is even readable against a
-  non-local `Aircraft` component before committing to the design. **Gated friendly-only** (decision
-  5) — unlike `SpeedReading`/`AltReading`, this does not reuse the `HasDetail` gate; an enemy or
-  neutral row always shows `—` for fuel regardless of lock state.
+- **(a) Fuel — squad-only, not a telemetry field.** Revised after investigation on the NOXMFD side
+  (`roke77/NOXMFD` `docs/atc-extension-support.md`, item 1): `GetFuelLevel()` only works for the
+  local player's own aircraft — a non-local aircraft's `FuelTank` component is disabled entirely
+  (`aircraft.LocalSim` gate), so its fuel reading is simply wrong, not approximate. The game has no
+  networked "current fuel" value for any aircraft besides the one the reading player is flying.
+  Fuel now travels player-to-player over NOXMFD's existing squadron transport instead — which also
+  narrows the column from **friendly** to **squad**: only aircraft flown by a pilot in the ATC
+  controller's own squad ever show a fuel number; every other row, friendly or not, always shows
+  `—`. Decision 5 below is updated to match.
 - **(b) Per-instance icon color/ring override.** A new `Api` surface keyed by unit id (e.g.
   `SetUnitColorOverride(id, hex)` or a ring-only variant, alongside the existing type-keyed
   overrides), plus a MAP.js change to draw it layered over the existing faction/type icon rather
@@ -150,10 +153,13 @@ other NOXMFD extension already respects (EXTENSIONS.md: extensions never edit NO
    implication that faction stays visible alongside the status ring. `UnitInfo.Faction`
    (`TelemetrySnapshot.cs:529`) is already present per row, so this needs no new telemetry — just
    no client-side faction filter in Phase 1.
-5. **Fuel is friendly-only, always** (Phase 2). Unlike SPD/ALT/HDG, fuel isn't something a radar
-   lock plausibly reveals, so it doesn't reuse the existing `HasDetail` gate — see
-   [Data-visibility model](#data-visibility-model). An enemy or neutral row shows `—` for fuel even
-   while actively sensor-locked.
+5. **Fuel is squad-only, always** (Phase 2; revised from "friendly-only" — see phasing item (a)).
+   No networked value exists for another aircraft's true current fuel, so it can't come through
+   telemetry at all — the only accurate source is each pilot's own NOXMFD instance, shared with
+   their squad over the existing squadron transport. A friendly aircraft outside the controller's
+   own squad shows `—` for fuel, same as an enemy or neutral row — this is narrower than the
+   original "friendly-only" framing in [Data-visibility model](#data-visibility-model), not a
+   relaxation of it.
 6. **Phase 1 ships without aircraft-only filtering.** No per-contact tag exists to filter on today
    (decision — see feasibility row 7); rather than approximate it with an unreliable heuristic,
    Phase 1 shows every detected contact type and Phase 2 adds the real flag (item (d), reusing
