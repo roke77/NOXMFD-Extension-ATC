@@ -1,0 +1,7 @@
+bin/
+obj/
+.vs/
+*.user
+
+# Local machine-specific game path override (see AtcModule.csproj)
+GameDir.props

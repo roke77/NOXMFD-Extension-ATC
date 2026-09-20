@@ -1,0 +1,54 @@
+# NOXMFD Extension: ATC Module
+
+[![NOXMFD](https://img.shields.io/badge/Requires-NOXMFD-blue)](https://github.com/roke77/NOXMFD)
+[![Version](https://img.shields.io/badge/Version-0.1.0-green)](CHANGELOG.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+Placeholder repo — scaffold only, registers an empty **ATC** page under
+[NOXMFD](https://github.com/roke77/NOXMFD)'s EXT nav. See [issue #89](https://github.com/roke77/NOXMFD/issues/89)
+for the feature this will become: a traffic-management / flight-progress MFD for a player acting
+as Air Traffic Control.
+
+Built entirely through NOXMFD's public extension API — see NOXMFD's
+[`EXTENSIONS.md`](https://github.com/roke77/NOXMFD/blob/main/EXTENSIONS.md). This repo does
+**not** modify NOXMFD's own source.
+
+## What's here
+
+- `src/plugin/Plugin.cs` — registers the **ATC** EXT page.
+- `src/plugin/AtcPageAssets.cs` — embedded-resource lookup for `src/web/`'s HTML/CSS/JS.
+- `src/web/atc.{html,css,js}` — the page itself, currently an empty "COMING SOON" placeholder.
+- `docs/` — planning docs for the real feature (see issue #89).
+- `lib/NOXMFD.dll` — compile-time reference only, not shipped to players (NOXMFD is already
+  installed as its own plugin; `Private=false` in the `.csproj` keeps this project from bundling a
+  second copy). Committed to this repo since it's this project's own dependency.
+
+## Building
+
+Requires a local Nuclear Option install with BepInEx 5 and NOXMFD already installed. Create a
+gitignored `GameDir.props` next to the `.csproj` if your install isn't the default Steam path:
+
+```xml
+<Project><PropertyGroup>
+  <GameDir>D:\SteamLibrary\steamapps\common\Nuclear Option</GameDir>
+</PropertyGroup></Project>
+```
+
+Then:
+
+```bash
+dotnet build AtcModule.csproj -c Release
+```
+
+The build's `DeployToGame` target copies the built DLL straight into
+`$(GameDir)\BepInEx\plugins\` for you.
+
+## Installing
+
+1. Install BepInEx 5 and [NOXMFD](https://github.com/roke77/NOXMFD).
+2. Drop `NOXMFD.AtcModule.dll` into `BepInEx/plugins/`.
+3. Launch the game — an **ATC** entry appears under NOXMFD's EXT nav.
+
+## Changelog
+
+See [`CHANGELOG.md`](CHANGELOG.md).

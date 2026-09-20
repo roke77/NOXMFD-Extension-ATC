@@ -1,0 +1,73 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ATC Module: a standalone NOXMFD extension (see NOXMFD's EXTENSIONS.md). Lives in its own
+    repo, separate from NOXMFD's own source — it never edits NOXMFD's plugin/web code, only
+    consumes the public NOXMFD.Api surface via the prebuilt lib\NOXMFD.dll committed alongside
+    this project.
+
+    >>> SET YOUR GAME PATH <<<
+    GameDir must point at your Nuclear Option install on the machine that BUILDS this. Don't edit
+    the default below — create a local, gitignored GameDir.props next to this file instead:
+
+      <Project><PropertyGroup>
+        <GameDir>D:\SteamLibrary\steamapps\common\Nuclear Option</GameDir>
+      </PropertyGroup></Project>
+  -->
+  <Import Project="GameDir.props" Condition="Exists('GameDir.props')" />
+
+  <PropertyGroup>
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Nuclear Option</GameDir>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>NOXMFD.AtcModule</AssemblyName>
+    <Product>NOXMFD: ATC Module Extension</Product>
+    <Description>ATC traffic-management MFD page for NOXMFD, as an extension</Description>
+    <Version>0.1.0</Version>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>AtcModule</RootNamespace>
+    <DebugType>portable</DebugType>
+    <NoWarn>BepInEx002</NoWarn>
+    <RestoreAdditionalProjectSources>
+      https://api.nuget.org/v3/index.json;
+      https://nuget.bepinex.dev/v3/index.json;
+      https://nuget.samboy.dev/v3/index.json
+    </RestoreAdditionalProjectSources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Own embedded web assets, mirroring NOXMFD's own src/plugin + src/web split
+         (docs/src-architecture.md) — resource names still end in ".web.<dotted path>" regardless
+         of the src\ prefix, resolved by AtcPageAssets.cs's own suffix match. -->
+    <EmbeddedResource Include="src\web\**\*" Exclude="src\web\**\*.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" />
+    <PackageReference Include="BepInEx.PluginInfoProps" Version="2.1.0" />
+    <PackageReference Include="UnityEngine.Modules" Version="2022.3.6" IncludeAssets="compile" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The only NOXMFD dependency this project has: its public Api surface. Referenced as a
+         prebuilt DLL (not source) since this repo is standalone from NOXMFD's own — Private=
+         false because BepInEx already loads NOXMFD.dll itself; copying a second copy alongside
+         this plugin would double-load the assembly. -->
+    <Reference Include="NOXMFD">
+      <HintPath>lib\NOXMFD.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="DeployToGame" AfterTargets="Build">
+    <Copy
+      SourceFiles="$(OutputPath)$(AssemblyName).dll"
+      DestinationFolder="$(GameDir)\BepInEx\plugins"
+      OverwriteReadOnlyFiles="true" />
+    <Message Text="Deployed $(AssemblyName).dll to $(GameDir)\BepInEx\plugins" Importance="high" />
+  </Target>
+
+</Project>
