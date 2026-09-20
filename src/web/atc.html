@@ -8,9 +8,59 @@
   <link rel="stylesheet" href="atc.css">
 </head>
 <body>
-  <div class="mfd-empty" id="atc-empty">
-    <span class="mfd-empty-title">ATC</span>&mdash; COMING SOON &mdash;
+  <div class="atc-panel">
+    <div class="atc-head">
+      <span class="atc-title">AIR TRAFFIC CONTROL</span>
+      <span class="atc-hint">click row = select</span>
+    </div>
+
+    <div class="atc-range-bar">
+      <span class="atc-range-label">RANGE</span>
+      <div class="atc-range-btns" id="range-btns">
+        <button class="atc-range-btn" data-range="5">5</button>
+        <button class="atc-range-btn" data-range="10">10</button>
+        <button class="atc-range-btn" data-range="25">25</button>
+        <button class="atc-range-btn" data-range="50">50</button>
+        <button class="atc-range-btn" data-range="100">100</button>
+        <button class="atc-range-btn on" data-range="0">ALL</button>
+      </div>
+      <span class="atc-range-unit">KM</span>
+    </div>
+
+    <div class="atc-list">
+      <div class="atc-list-head">
+        <span>CALLSIGN</span><span>STATUS</span><span>ALT</span><span>SPD</span><span>HDG</span><span>DIST</span><span>FUEL</span>
+      </div>
+      <div class="atc-list-scroll">
+        <div class="atc-list-rows" id="rows"></div>
+        <div class="atc-list-empty" id="list-empty">NO CONTACTS IN RANGE</div>
+      </div>
+    </div>
+
+    <div class="atc-footer">
+      <div class="atc-selected" id="selected-line">SELECTED: <span class="atc-none">NONE</span></div>
+      <select class="atc-status-select" id="status-select" disabled>
+        <option value="UNKNOWN">UNKNOWN</option>
+        <option value="PARKED">PARKED</option>
+        <option value="TAXI">TAXI</option>
+        <option value="TAKEOFF">TAKEOFF</option>
+        <option value="DEPARTURE">DEPARTURE</option>
+        <option value="ENROUTE">ENROUTE</option>
+        <option value="HOLDING">HOLDING</option>
+        <option value="ARRIVAL">ARRIVAL</option>
+        <option value="APPROACH">APPROACH</option>
+        <option value="FINAL">FINAL</option>
+        <option value="LANDED">LANDED</option>
+        <option value="EMERGENCY">EMERGENCY</option>
+      </select>
+      <button class="atc-locate-btn" id="locate-btn" disabled title="Needs a future NOXMFD update (docs/atc-mfd-plan.md Phase 2)">LOCATE ON MAP</button>
+    </div>
   </div>
-  <script src="atc.js"></script>
+
+  <div class="mfd-empty" id="no-mission">
+    <span class="mfd-empty-title">ATC</span>— NO SIGNAL —
+  </div>
+
+  <script type="module" src="atc.js"></script>
 </body>
 </html>

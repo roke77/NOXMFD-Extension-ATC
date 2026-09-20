@@ -4,10 +4,12 @@
 ![Version](https://img.shields.io/badge/Version-0.1.0-green)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Placeholder repo — scaffold only, registers an empty **ATC** page under
-[NOXMFD](https://github.com/roke77/NOXMFD)'s EXT nav. See [issue #89](https://github.com/roke77/NOXMFD/issues/89)
-for the feature this will become: a traffic-management / flight-progress MFD for a player acting
-as Air Traffic Control.
+Adds an **ATC** page under [NOXMFD](https://github.com/roke77/NOXMFD)'s EXT nav — a
+traffic-management / flight-progress MFD for a player acting as Air Traffic Control, per
+[issue #89](https://github.com/roke77/NOXMFD/issues/89). Phase 1 (see
+[`docs/atc-mfd-plan.md`](docs/atc-mfd-plan.md)): the traffic table, range presets, and ATC Status
+assignment. Fuel, MAP integration, and aircraft-only filtering need NOXMFD core changes first
+(Phase 2, also in that doc) and aren't built yet.
 
 Built entirely through NOXMFD's public extension API — see NOXMFD's
 [`EXTENSIONS.md`](https://github.com/roke77/NOXMFD/blob/main/EXTENSIONS.md). This repo does
@@ -17,8 +19,10 @@ Built entirely through NOXMFD's public extension API — see NOXMFD's
 
 - `src/plugin/Plugin.cs` — registers the **ATC** EXT page.
 - `src/plugin/AtcPageAssets.cs` — embedded-resource lookup for `src/web/`'s HTML/CSS/JS.
-- `src/web/atc.{html,css,js}` — the page itself, currently an empty "COMING SOON" placeholder.
-- `docs/` — planning docs for the real feature (see issue #89).
+- `src/plugin/AtcStatus.cs` — the session-only ATC Status assignment map and its command handler.
+- `src/web/atc.{html,css,js}` — the page itself: traffic table, range presets, ATC Status footer.
+- `docs/` — planning doc (design decisions, phasing, what's built) — see
+  [`atc-mfd-plan.md`](docs/atc-mfd-plan.md).
 - `lib/NOXMFD.dll` — compile-time reference only, not shipped to players (NOXMFD is already
   installed as its own plugin; `Private=false` in the `.csproj` keeps this project from bundling a
   second copy). Committed to this repo since it's this project's own dependency.

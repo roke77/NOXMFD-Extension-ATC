@@ -161,4 +161,26 @@ other NOXMFD extension already respects (EXTENSIONS.md: extensions never edit NO
 
 ## What's built
 
-Nothing yet. Phase 1 scope is fully decided — ready to start implementation.
+**Status**: Phase 1 built, layout-verified against synthetic data. Not yet checked in-game.
+
+| File | What |
+|---|---|
+| [`src/plugin/Plugin.cs`](../src/plugin/Plugin.cs) | Registers the **ATC** EXT page with a command handler (`AtcStatus.HandleCommand`). |
+| [`src/plugin/AtcStatus.cs`](../src/plugin/AtcStatus.cs) | The session-only `unitId → status` map (decision 3), the `set-status` command handler (validates against the ticket's own 12-value enum), and the push back to every connected pane via `NOXMFD.Api.PublishSlice`. |
+| [`src/web/atc.js`](../src/web/atc.js) | Opens its own `TelemetrySource` (see [Telemetry wiring](#telemetry-wiring)), renders the table (sorted by distance, faction-tinted per TGT's own convention), range-preset filtering, row selection, and posts status changes to `/ext/atc/command`. |
+| [`src/web/atc.html`](../src/web/atc.html) / [`atc.css`](../src/web/atc.css) | The page itself — header, range-preset bar, table, SELECTED/STATUS/LOCATE ON MAP footer (issue #89's own mockup), and a shared `.mfd-empty` no-mission state. |
+
+Not built this phase (Phase 2, needs core NOXMFD changes first): fuel column (always shows `—`),
+aircraft-only filtering (every contact type shows), LOCATE ON MAP (button renders disabled), and
+MAP → ATC sync.
+
+**Verification performed**:
+- `dotnet build -c Release` — 0 errors.
+- No dev-server harness exists for extension pages (`tools/serve_web.py` only mocks NOXMFD's own
+  first-party pages), so the real `atc.html`/`atc.css`/`atc.js` were checked against a synthetic
+  `TelemetrySource` stub emitting a fixed six-contact frame (mixed factions, mixed `HasDetail`, an
+  `ext.atc` status slice) over a local static server: confirmed faction tinting, the `ext.atc`
+  status merge, blank ALT/SPD/HDG when `!hd`, distance sort, range-preset filtering, row selection
+  (amber outline, footer SELECTED/STATUS populate and enable), and the always-blank fuel column.
+- Not exercised: the real `/stream` connection, the real `/ext/atc/command` POST round-trip, and
+  the no-mission empty state — all need the actual game running NOXMFD + this extension together.

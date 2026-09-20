@@ -1,2 +1,182 @@
-/* Placeholder — no page-specific styling yet. Reuses NOXMFD's shared theme.css (.mfd-empty)
-   for the "coming soon" state. */
+/* ATC page — Phase 1 (docs/atc-mfd-plan.md). Green-phosphor MFD theme via the shared --no-*
+   tokens; faction accents (friendly blue / enemy red) echo TGT's own tgt.css, which is why this
+   defines its own --atc-blue rather than reading --no-blue (that token is a different, mod-only
+   decorative accent — see tgt.css's own comment on --tgt-blue). */
+
+:root { --atc-blue: #4aa3ff; }
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; height: 100%;
+  background: var(--no-bg);
+  color: var(--no-green);
+  font-family: var(--no-font);
+  overflow: hidden;
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.atc-panel {
+  height: 100%;
+  display: flex; flex-direction: column;
+  gap: clamp(4px, 1.4vh, 12px);
+  padding: clamp(6px, 1.8vmin, 16px);
+  padding-left: clamp(34px, 5vw, 48px);
+  padding-right: clamp(34px, 5vw, 48px);
+}
+
+.atc-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  border-bottom: 1px solid var(--no-green-dark);
+  padding-bottom: clamp(2px, 0.8vh, 6px);
+}
+.atc-title { font-size: clamp(13px, 2.6vmin, 22px); letter-spacing: 0.08em; color: var(--no-green); }
+.atc-hint  { font-size: clamp(8px, 1.4vmin, 12px); color: var(--no-green-dim); }
+
+/* Range presets — same look as TGT's own preset bar (tgt.css's .tgt-preset-btn). */
+.atc-range-bar {
+  flex: 0 0 auto;
+  display: flex; align-items: center;
+  gap: clamp(4px, 1vw, 8px);
+}
+.atc-range-label, .atc-range-unit {
+  color: var(--no-green-dim);
+  font-size: clamp(9px, 1.4vmin, 12px);
+  letter-spacing: 0.06em;
+}
+.atc-range-btns { display: flex; gap: clamp(3px, 0.8vw, 7px); }
+.atc-range-btn {
+  font-family: var(--no-font);
+  background: none;
+  color: var(--no-green-dim);
+  border: 1px solid var(--no-green-dark);
+  border-radius: 3px;
+  padding: clamp(4px, 1vh, 8px) clamp(7px, 1.4vw, 12px);
+  font-size: clamp(9px, 1.6vmin, 13px);
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+.atc-range-btn.on { color: var(--no-green); border-color: var(--no-green); }
+.atc-range-btn:active { background: rgba(var(--no-green-rgb), 0.10); }
+
+/* ── Traffic list ──────────────────────────────────────────────────────────────────────── */
+.atc-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex; flex-direction: column;
+  border-top: 1px solid var(--no-green-dark);
+  padding-top: clamp(3px, 0.8vh, 7px);
+}
+.atc-list-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex; flex-direction: column;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--no-gray) transparent;
+}
+.atc-list-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.atc-list-scroll::-webkit-scrollbar-track { background: transparent; }
+.atc-list-scroll::-webkit-scrollbar-thumb { background: var(--no-gray); border-radius: 3px; }
+
+/* CALLSIGN | STATUS | ALT | SPD | HDG | DIST | FUEL */
+.atc-list-head, .atc-row {
+  display: grid;
+  grid-template-columns: minmax(84px, 1fr) clamp(70px, 9vw, 96px) clamp(56px, 8vw, 80px)
+                          clamp(56px, 8vw, 76px) clamp(40px, 6vw, 58px) clamp(56px, 8vw, 76px) clamp(44px, 6vw, 60px);
+  gap: clamp(6px, 1.2vw, 12px);
+  align-items: center;
+  min-width: 406px;
+}
+.atc-list-head {
+  position: sticky;
+  top: 0;
+  background: var(--no-bg);
+  padding: 0 clamp(4px, 1vw, 10px) clamp(2px, 0.6vh, 5px);
+  color: var(--no-green-dim);
+  font-size: clamp(9px, 1.4vmin, 13px);
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--no-green-dark);
+}
+.atc-row {
+  padding: clamp(4px, 1vh, 9px) clamp(4px, 1vw, 10px);
+  border-bottom: 1px solid rgba(var(--no-green-rgb), 0.10);
+  font-size: clamp(10px, 1.7vmin, 15px);
+  cursor: pointer;
+}
+.atc-row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.atc-row.f-friendly .atc-c-name { color: var(--atc-blue); }
+.atc-row.f-neutral  .atc-c-name { color: var(--no-label); }
+.atc-row.f-enemy    .atc-c-name { color: var(--no-red); }
+.atc-c-alt, .atc-c-spd, .atc-c-hdg, .atc-c-dist, .atc-c-fuel {
+  color: var(--no-green-dim);
+  font-variant-numeric: tabular-nums;
+}
+.atc-c-status { font-size: 0.9em; letter-spacing: 0.02em; }
+.atc-c-status[data-status="ENROUTE"], .atc-c-status[data-status="DEPARTURE"], .atc-c-status[data-status="ARRIVAL"] { color: var(--no-green); }
+.atc-c-status[data-status="HOLDING"], .atc-c-status[data-status="APPROACH"], .atc-c-status[data-status="FINAL"] { color: var(--no-amber); }
+.atc-c-status[data-status="EMERGENCY"] { color: var(--no-red); }
+.atc-c-status[data-status="LANDED"], .atc-c-status[data-status="PARKED"] { color: var(--no-green-dim); }
+.atc-c-status[data-status="UNKNOWN"] { color: var(--no-gray); }
+
+/* The clicked/selected row — same amber outline convention TGT uses for its own focused row
+   (tgt.css's .tl-row.tgt-focused). */
+.atc-row.selected { outline: 1px solid var(--no-amber); outline-offset: -1px; background: rgba(255,170,0,0.08); }
+
+.atc-list-empty {
+  flex: 1 1 auto;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--no-green-dark);
+  font-size: clamp(11px, 1.8vmin, 16px); letter-spacing: 0.08em;
+}
+.atc-list-rows:not(:empty) + .atc-list-empty { display: none; }
+
+/* ── Footer: SELECTED / STATUS dropdown / LOCATE ON MAP ───────────────────────────────────
+   The ticket's own mockup ("SELECTED: ACE01  STATUS: [ APPROACH ▼ ]", issue #89 section 2).
+   LOCATE ON MAP is drawn but disabled — it needs the shared-selection Api NOXMFD doesn't have
+   yet (docs/atc-mfd-plan.md Phase 2, item (c)). */
+.atc-footer {
+  flex: 0 0 auto;
+  display: flex; align-items: center;
+  gap: clamp(8px, 1.6vw, 14px);
+  padding-top: clamp(3px, 0.8vh, 7px);
+  border-top: 1px solid var(--no-green-dark);
+}
+.atc-selected {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--no-green-dim);
+  font-size: clamp(10px, 1.7vmin, 14px);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.atc-selected .atc-none { color: var(--no-green-dark); }
+.atc-status-select {
+  font-family: var(--no-font);
+  background: var(--no-panel-bg);
+  color: var(--no-amber);
+  border: 1px solid var(--no-green-dark);
+  border-radius: 3px;
+  padding: clamp(4px, 1vh, 8px) clamp(6px, 1.2vw, 10px);
+  font-size: clamp(9px, 1.6vmin, 13px);
+}
+.atc-status-select:disabled { color: var(--no-gray); }
+.atc-locate-btn {
+  font-family: var(--no-font);
+  background: var(--no-panel-bg);
+  color: var(--no-green);
+  border: 1px solid var(--no-green);
+  border-radius: 3px;
+  padding: clamp(5px, 1.2vh, 10px) clamp(8px, 1.6vw, 14px);
+  font-size: clamp(9px, 1.6vmin, 13px);
+  letter-spacing: 0.03em;
+  cursor: not-allowed;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.atc-locate-btn:disabled { color: var(--no-green-dark); border-color: var(--no-green-dark); }
+
+/* No-mission state — shared .mfd-empty (theme.css), same convention MAP/other simple pages use. */
+#no-mission { display: none; }
+body.no-mission .atc-panel { display: none; }
+body.no-mission #no-mission { display: block; }
