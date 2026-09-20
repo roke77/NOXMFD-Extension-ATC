@@ -4,7 +4,8 @@
 
 Planning — nothing built yet. This records a feasibility pass of
 [roke77/NOXMFD#89](https://github.com/roke77/NOXMFD/issues/89) against NOXMFD's actual telemetry
-and extension API (as of NOXMFD 0.51.1), and lays out a phased plan.
+and extension API (as of NOXMFD 0.51.1), lays out a phased plan, and records the design decisions
+below. Phase 1 is ready to start.
 
 ## Source ticket
 
@@ -32,9 +33,9 @@ Requirements, as written:
 
 | # | Requirement | Status | Notes |
 |---|---|---|---|
-| 1 | Traffic table | Partial | `UnitInfo` (`TelemetrySnapshot.cs:522-578`, serialized by `TelemetryJson.cs`'s `UnitsArray`) already carries a stable id, unit type, position, heading, faction, `PilotName`, and `SpeedReading`/`AltReading` (only when `HasDetail`). No field maps cleanly to "Callsign" (see open questions), and there's no per-unit fuel or distance field. |
+| 1 | Traffic table | Partial | `UnitInfo` (`TelemetrySnapshot.cs:522-578`, serialized by `TelemetryJson.cs`'s `UnitsArray`) already carries a stable id, unit type, position, heading, faction, `PilotName`, and `SpeedReading`/`AltReading` (only when `HasDetail`). No field maps cleanly to "Callsign" (resolved as `PilotName`, see decisions), and there's no per-unit fuel or distance field. |
 | 2 | Fuel | Missing — needs a NOXMFD core change | `TelemetryReader.cs:874` reads fuel (`aircraft.GetFuelLevel()`) only for the local player's own aircraft; `TelemetrySnapshot.Fuel` is one top-level `float`, not an array. `UnitInfo` has no fuel field for any other unit. |
-| 3 | Distance / range presets | Partial — pattern exists, anchor doesn't | No server-side "reference position" concept exists anywhere. TGT's own RNG column computes range client-side against the local player's `WorldX/WorldZ` (`telemetry-source.js:333-335`, formatted by `range-format.js:5-9`). The same client-side formula covers range presets directly — what's missing is a definition of "ATC/reference position" itself (see open questions). |
+| 3 | Distance / range presets | Partial — pattern exists, anchor doesn't | No server-side "reference position" concept exists anywhere. TGT's own RNG column computes range client-side against the local player's `WorldX/WorldZ` (`telemetry-source.js:333-335`, formatted by `range-format.js:5-9`). The same client-side formula covers range presets directly — resolved to use that same local-player anchor, see decisions. |
 | 4 | ATC Status assignment | Supported today, no core change | Pure bookkeeping — doesn't touch the aircraft. The extension can own an in-memory `Dictionary<unitId, status>` and publish it back through its own `NOXMFD.Api.PublishSlice`, keyed by `UnitInfo.Id` (`TelemetrySnapshot.cs:524`, `Unit.persistentID.Id` — stable across frames). |
 | 5 | Two-way MAP ↔ ATC selection | Missing — needs a NOXMFD core change | MAP's click-to-select is local-only client state (`map.js:1200`, `selectAt`) — never sent to the server, never broadcast anywhere. The only existing "selected/focused unit" concept, `TargetFocus.cs` / `TelemetrySnapshot.FocusedTargetId`, tracks a *weapon lock*, is read-only from JS, and has no `Api` method to set it from outside. |
 | 6 | Per-instance status ring on MAP | Missing — needs a NOXMFD core change | `Api.cs`'s only coloring surface (`SetFactionColorOverride`/`SetUnitTypeColorOverride`) keys by unit **type** string, optionally filtered by faction (`IconColorRegistry.cs:64-98`) — there's no per-unit-id override anywhere. |
@@ -46,14 +47,15 @@ Requirements, as written:
 No NOXMFD core changes required. Scope: the table, status assignment, and range presets — no MAP
 visual or selection integration yet.
 
-- **Table columns**: id, unit type, `PilotName` (standing in for Callsign — see open question 1),
-  heading, `SpeedReading`/`AltReading` (blank when `!HasDetail`, matching TGT's own COMPACT
-  behavior), distance computed client-side against the local player's `WorldX/WorldZ` (TGT's exact
-  formula). **Fuel column shows `—` for every row** — no per-unit data exists yet; the column stays
-  in the layout so Phase 2 can fill it in without a table redesign.
+- **Table columns**: id, unit type, `PilotName` (as Callsign — decision 1), heading,
+  `SpeedReading`/`AltReading` (blank when `!HasDetail`, matching TGT's own COMPACT behavior),
+  distance computed client-side against the local player's own `WorldX/WorldZ` (decision 2, TGT's
+  exact formula, no new anchor UI needed). **Fuel column shows `—` for every row** — no per-unit
+  data exists yet; the column stays in the layout so Phase 2 can fill it in without a table
+  redesign.
 - **ATC Status**: dropdown on a selected row, backed by an in-memory `Dictionary<unitId, status>`
-  inside the extension's own plugin. Not persisted across a session restart — a known limitation,
-  not a blocker (see open question 3).
+  inside the extension's own plugin. Resets on plugin reload/session restart by design — not
+  persisted (decision 3).
 - **Range presets**: client-side filter over the same distance value.
 - **Not in this phase**: LOCATE ON MAP, MAP → ATC sync, and the MAP status ring all require the
   Phase 2 core surfaces below and are left as future work indicators in the UI (disabled/no-op)
@@ -79,21 +81,16 @@ other NOXMFD extension already respects (EXTENSIONS.md: extensions never edit NO
   `TargetFocus.cs` is the closest existing analog but is lock-specific and read-only — this needs
   its own, more general concept rather than repurposing it.
 
-## Open questions
+## Design decisions
 
-1. **What does "Callsign" mean here?** NOXMFD's telemetry has `PilotName` (the controlling
-   pilot's display name) but nothing resembling the ticket mockup's squadron-style callsigns
-   (`VIPER2`, `ACE01`) — those look invented for the example. Is `PilotName` an acceptable stand-in
-   for Phase 1, or does a real callsign need to come from squad membership or a manually-assigned
-   label — which would itself be another gap to size?
-2. **What is the "ATC/reference position"?** Always the ATC player's own current position (the
-   same convention TGT's RNG already uses), or a fixed anchor — an airbase, or a point the ATC
-   player sets by clicking MAP? This decides both the Phase 1 distance formula and whether Phase 1
-   needs any UI to set/move that anchor.
-3. **Does ATC Status need to survive a restart?** Phase 1's in-memory dictionary resets on plugin
-   reload/session restart. Acceptable for a first cut, or does persistence need to be designed in
-   from the start?
+1. **Callsign → `PilotName`.** NOXMFD's telemetry has no squadron-style callsign field (the
+   ticket mockup's `VIPER2`/`ACE01` look invented for the example) — the Callsign column shows the
+   controlling pilot's display name. Revisit only if this feels wrong once played.
+2. **ATC/reference position → the ATC player's own current position.** Same convention TGT's RNG
+   column already uses. No settable/fixed anchor, no new UI to place or move one.
+3. **ATC Status is session-only.** The in-memory `Dictionary<unitId, status>` resets on plugin
+   reload/session restart. Not persisted to disk.
 
 ## What's built
 
-Nothing yet. Phase 1 implementation starts once the open questions above are answered.
+Nothing yet. Phase 1 scope is fully decided — ready to start implementation.
