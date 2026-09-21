@@ -40,11 +40,12 @@ namespace AtcModule
         };
 
         [Serializable]
-        private class SetStatusCommand
+        private class Command
         {
             public string cmd = "";
             public uint id;
             public string status = "";
+            public bool on;   // 'track' only
         }
 
         // NOXMFD guarantees this runs on the Unity main thread (docs/extensions-api.md) — not that
@@ -52,10 +53,21 @@ namespace AtcModule
         // below never run concurrently with each other, so the dictionary needs no lock.
         internal static void HandleCommand(string json)
         {
-            SetStatusCommand? cmd;
-            try { cmd = JsonUtility.FromJson<SetStatusCommand>(json); }
+            Command? cmd;
+            try { cmd = JsonUtility.FromJson<Command>(json); }
             catch (Exception ex) { Plugin.Log?.LogWarning($"[ATC] malformed command: {ex.Message}"); return; }
-            if (cmd == null || cmd.id == 0) return;
+            if (cmd == null) return;
+
+            // TRACK ON MAP (the row-select-driven follow-on to LOCATE ON MAP) — no unit id of its
+            // own, it just toggles whether MAP keeps following whatever 'locate' last selected, so
+            // this is checked before the id == 0 guard below (every other command needs a real id).
+            if (cmd.cmd == "track")
+            {
+                NOXMFD.Api.SetSelectedUnitTrack(cmd.on);
+                return;
+            }
+
+            if (cmd.id == 0) return;
 
             // LOCATE ON MAP (docs/atc-mfd-plan.md Phase 2 item (c)) — one-way, extension -> MAP
             // only; NOXMFD's SharedSelection has no path back from a MAP click to here.

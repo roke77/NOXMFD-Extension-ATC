@@ -112,7 +112,21 @@ html, body {
   color: var(--no-green-dim);
   font-variant-numeric: tabular-nums;
 }
-.atc-c-status { font-size: 0.9em; letter-spacing: 0.02em; }
+/* Per-row STATUS assignment — a <select>, not plain text, so a controller can set it without
+   selecting the row first. Colored the same way the old read-only span was, keyed off data-status
+   (kept in sync with the live .value by atc.js's change handler, since CSS attribute selectors
+   read the DOM attribute, not the property). */
+.atc-c-status {
+  font-family: var(--no-font);
+  background: var(--no-panel-bg);
+  border: 1px solid var(--no-green-dark);
+  border-radius: 3px;
+  padding: clamp(2px, 0.6vh, 5px) clamp(3px, 0.8vw, 6px);
+  font-size: 0.85em;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  width: 100%;
+}
 .atc-c-status[data-status="ENROUTE"], .atc-c-status[data-status="DEPARTURE"], .atc-c-status[data-status="ARRIVAL"] { color: var(--no-green); }
 .atc-c-status[data-status="HOLDING"], .atc-c-status[data-status="APPROACH"], .atc-c-status[data-status="FINAL"] { color: var(--no-amber); }
 .atc-c-status[data-status="EMERGENCY"] { color: var(--no-red); }
@@ -131,9 +145,10 @@ html, body {
 }
 .atc-list-rows:not(:empty) + .atc-list-empty { display: none; }
 
-/* ── Footer: SELECTED / STATUS dropdown / LOCATE ON MAP ───────────────────────────────────
-   The ticket's own mockup ("SELECTED: ACE01  STATUS: [ APPROACH ▼ ]", issue #89 section 2).
-   LOCATE ON MAP is disabled until a row is selected (atc.js's updateFooter). */
+/* ── Footer: SELECTED / TRACK ON MAP ───────────────────────────────────────────────────────
+   STATUS moved into each row (a controller sets it without selecting the row first) and LOCATE ON
+   MAP is now automatic on select, so the footer is just the current pick and the follow toggle.
+   The checkbox is disabled until a row is selected (atc.js's updateFooter). */
 .atc-footer {
   flex: 0 0 auto;
   display: flex; align-items: center;
@@ -149,30 +164,19 @@ html, body {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .atc-selected .atc-none { color: var(--no-green-dark); }
-.atc-status-select {
-  font-family: var(--no-font);
-  background: var(--no-panel-bg);
-  color: var(--no-amber);
-  border: 1px solid var(--no-green-dark);
-  border-radius: 3px;
-  padding: clamp(4px, 1vh, 8px) clamp(6px, 1.2vw, 10px);
-  font-size: clamp(9px, 1.6vmin, 13px);
-}
-.atc-status-select:disabled { color: var(--no-gray); }
-.atc-locate-btn {
-  font-family: var(--no-font);
-  background: var(--no-panel-bg);
-  color: var(--no-green);
-  border: 1px solid var(--no-green);
-  border-radius: 3px;
-  padding: clamp(5px, 1.2vh, 10px) clamp(8px, 1.6vw, 14px);
+.atc-track-label {
+  flex: 0 0 auto;
+  display: flex; align-items: center;
+  gap: clamp(4px, 0.8vw, 7px);
+  color: var(--no-green-dim);
   font-size: clamp(9px, 1.6vmin, 13px);
   letter-spacing: 0.03em;
-  cursor: pointer;
   white-space: nowrap;
-  flex: 0 0 auto;
+  cursor: pointer;
 }
-.atc-locate-btn:disabled { color: var(--no-green-dark); border-color: var(--no-green-dark); cursor: not-allowed; }
+.atc-track-label input[type="checkbox"] { accent-color: var(--no-green); cursor: pointer; }
+.atc-track-label input[type="checkbox"]:disabled { cursor: not-allowed; }
+.atc-track-label:has(input:disabled) { color: var(--no-green-dark); cursor: not-allowed; }
 
 /* No-mission state — shared .mfd-empty (theme.css), same convention MAP/other simple pages use. */
 #no-mission { display: none; }

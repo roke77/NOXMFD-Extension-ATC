@@ -10,14 +10,22 @@ import { fmtRng } from '/assets/services/range-format.js';
 const rowsEl = document.getElementById('rows');
 const emptyEl = document.getElementById('list-empty');
 const selectedLineEl = document.getElementById('selected-line');
-const statusSelectEl = document.getElementById('status-select');
 const rangeBtnsEl = document.getElementById('range-btns');
-const locateBtnEl = document.getElementById('locate-btn');
+const trackCheckboxEl = document.getElementById('track-checkbox');
+
+const STATUS_VALUES = ['UNKNOWN', 'PARKED', 'TAXI', 'TAKEOFF', 'DEPARTURE', 'ENROUTE', 'HOLDING',
+  'ARRIVAL', 'APPROACH', 'FINAL', 'LANDED', 'EMERGENCY'];
+function statusOptionsHtml(selected) {
+  return STATUS_VALUES.map(function(s) {
+    return '<option value="' + s + '"' + (s === selected ? ' selected' : '') + '>' + s + '</option>';
+  }).join('');
+}
 
 let lastFrame = null;      // the raw frame from the last onFrame — re-rendered on a range change too
 let rangeKm = 0;           // 0 = ALL
 let selectedId = 0;        // 0 = nothing selected
 let statusById = {};       // unitId -> status string, from this extension's own published slice
+let trackOn = false;       // TRACK ON MAP checkbox state, mirrored to NOXMFD via the 'track' command
 
 function fmtHdg(deg) {
   return Math.round(((deg % 360) + 360) % 360) + '°';
@@ -43,34 +51,37 @@ rangeBtnsEl.addEventListener('click', (e) => {
   render();
 });
 
-locateBtnEl.addEventListener('click', () => {
-  if (!selectedId) return;
-  postCommand({ cmd: 'locate', id: selectedId });
-});
-
-statusSelectEl.addEventListener('change', () => {
-  if (!selectedId) return;
-  postCommand({ cmd: 'set-status', id: selectedId, status: statusSelectEl.value });
-  // Optimistic local update — the next frame's published slice will confirm/overwrite this, but
-  // there's no reason to wait a tick to reflect the pilot's own click.
-  statusById[selectedId] = statusSelectEl.value;
-  render();
+trackCheckboxEl.addEventListener('change', () => {
+  if (!selectedId) { trackCheckboxEl.checked = false; return; }
+  trackOn = trackCheckboxEl.checked;
+  postCommand({ cmd: 'track', on: trackOn });
 });
 
 function postCommand(payload) {
   // NOXMFD's command endpoint requires an exact application/json Content-Type (CommandContentType.
   // IsJson) — fetch() defaults an unadorned string body to text/plain, which the server 415s. Every
-  // command sent through this (both set-status and locate) was silently rejected server-side until
+  // command sent through this (set-status, locate, track) was silently rejected server-side until
   // this header was added; the status dropdown's own optimistic local update masked it client-side.
+  // keepalive lets a command fired right as the page is torn down (see pagehide below) still land.
   fetch('/ext/atc/command', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+    keepalive: true,
   });
 }
 
+// Click-to-select now doubles as LOCATE ON MAP — a newly selected row (not a click that just
+// deselects) also asks MAP to jump to it. Deselecting drops TRACK ON MAP too: "keep following the
+// selected unit" has no meaning once nothing is selected, same as it disables the checkbox below.
 function selectRow(id) {
+  const newlySelected = selectedId !== id && id !== 0;
   selectedId = selectedId === id ? 0 : id;
+  if (newlySelected) postCommand({ cmd: 'locate', id: selectedId });
+  if (!selectedId && trackOn) {
+    trackOn = false;
+    postCommand({ cmd: 'track', on: false });
+  }
   render();
 }
 
@@ -78,16 +89,13 @@ function updateFooter(contactsById) {
   const u = selectedId ? contactsById[selectedId] : null;
   if (!u) {
     selectedLineEl.innerHTML = 'SELECTED: <span class="atc-none">NONE</span>';
-    statusSelectEl.disabled = true;
-    statusSelectEl.value = 'UNKNOWN';
-    locateBtnEl.disabled = true;
+    trackCheckboxEl.disabled = true;
+    trackCheckboxEl.checked = false;
     return;
   }
-  const status = statusById[selectedId] || 'UNKNOWN';
   selectedLineEl.textContent = 'SELECTED: ' + (u.pn || u.t);
-  statusSelectEl.disabled = false;
-  statusSelectEl.value = status;
-  locateBtnEl.disabled = false;
+  trackCheckboxEl.disabled = false;
+  trackCheckboxEl.checked = trackOn;
 }
 
 function render() {
@@ -111,6 +119,17 @@ function render() {
   }
   rows.sort((a, b) => (a.dist ?? Infinity) - (b.dist ?? Infinity));
 
+  // ponytail: render() runs on every ~10 Hz telemetry frame and rebuilds the whole row list from
+  // scratch (rowsEl.textContent = '' below) — fine for plain text, but a live rebuild would yank a
+  // status <select> out from under a pilot mid-pick, closing it before they can choose. Skip the
+  // rebuild entirely while one has focus rather than diffing per-row; the list is stale for at most
+  // a frame or two and self-heals the moment they blur it. A real fix would reuse row elements by
+  // id instead of wiping the list every frame.
+  if (rowsEl.contains(document.activeElement) && document.activeElement.classList.contains('atc-c-status')) {
+    updateFooter(contactsById);
+    return;
+  }
+
   rowsEl.textContent = '';
   for (const { u, dist } of rows) {
     const status = statusById[u.id] || 'UNKNOWN';
@@ -118,13 +137,25 @@ function render() {
     row.className = 'atc-row ' + factionClass(u.f) + (u.id === selectedId ? ' selected' : '');
     row.innerHTML =
       '<span class="atc-c-name">' + escapeHtml(u.pn || u.t) + '</span>' +
-      '<span class="atc-c-status" data-status="' + status + '">' + status + '</span>' +
+      '<select class="atc-c-status" data-status="' + status + '">' + statusOptionsHtml(status) + '</select>' +
       '<span class="atc-c-alt">' + (u.hd && u.al ? u.al : '—') + '</span>' +
       '<span class="atc-c-spd">' + (u.hd && u.sp ? u.sp : '—') + '</span>' +
       '<span class="atc-c-hdg">' + (u.hd && typeof u.h === 'number' ? fmtHdg(u.h) : '—') + '</span>' +
       '<span class="atc-c-dist">' + fmtRng(dist, d.metric) + '</span>' +
       '<span class="atc-c-fuel">' + fmtFuel(u.pf) + '</span>';
-    row.addEventListener('click', () => selectRow(u.id));
+    // The row itself is the select action (also fires LOCATE ON MAP, see selectRow) — the status
+    // dropdown lives inside the same row, so its own clicks must not bubble into that.
+    row.addEventListener('click', (e) => { if (!e.target.closest('select')) selectRow(u.id); });
+    const statusSel = row.querySelector('.atc-c-status');
+    statusSel.addEventListener('click', (e) => e.stopPropagation());
+    statusSel.addEventListener('change', () => {
+      postCommand({ cmd: 'set-status', id: u.id, status: statusSel.value });
+      // Optimistic local update (and the dataset attribute the color-by-status CSS reads) — the
+      // next frame's published slice will confirm/overwrite this, but there's no reason to wait a
+      // tick to reflect the pilot's own pick.
+      statusById[u.id] = statusSel.value;
+      statusSel.dataset.status = statusSel.value;
+    });
     rowsEl.appendChild(row);
   }
   emptyEl.style.display = rows.length ? 'none' : '';
@@ -151,4 +182,9 @@ function handleNoMission() {
 
 const source = new TelemetrySource({ onFrame: renderFrame, onNoMission: handleNoMission });
 source.connect();
-window.addEventListener('pagehide', () => source.disconnect());
+window.addEventListener('pagehide', () => {
+  // Track mode is a server-side flag with no owner once this page is gone — leaving it on would
+  // strand MAP following a unit nobody can un-track anymore.
+  if (trackOn) postCommand({ cmd: 'track', on: false });
+  source.disconnect();
+});

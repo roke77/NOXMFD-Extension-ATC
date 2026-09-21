@@ -38,21 +38,10 @@
 
     <div class="atc-footer">
       <div class="atc-selected" id="selected-line">SELECTED: <span class="atc-none">NONE</span></div>
-      <select class="atc-status-select" id="status-select" disabled>
-        <option value="UNKNOWN">UNKNOWN</option>
-        <option value="PARKED">PARKED</option>
-        <option value="TAXI">TAXI</option>
-        <option value="TAKEOFF">TAKEOFF</option>
-        <option value="DEPARTURE">DEPARTURE</option>
-        <option value="ENROUTE">ENROUTE</option>
-        <option value="HOLDING">HOLDING</option>
-        <option value="ARRIVAL">ARRIVAL</option>
-        <option value="APPROACH">APPROACH</option>
-        <option value="FINAL">FINAL</option>
-        <option value="LANDED">LANDED</option>
-        <option value="EMERGENCY">EMERGENCY</option>
-      </select>
-      <button class="atc-locate-btn" id="locate-btn" disabled>LOCATE ON MAP</button>
+      <label class="atc-track-label" id="track-label">
+        <input type="checkbox" id="track-checkbox" disabled>
+        TRACK ON MAP
+      </label>
     </div>
   </div>
 
