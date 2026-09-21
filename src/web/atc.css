@@ -80,9 +80,13 @@ html, body {
 .atc-list-scroll::-webkit-scrollbar-thumb { background: var(--no-gray); border-radius: 3px; }
 
 /* CALLSIGN | STATUS | ALT | SPD | HDG | DIST | FUEL */
+/* CALLSIGN is capped rather than the flexible track — callsigns are short and ellipsis-truncate
+   fine (.atc-row > span below) — so STATUS, the column with an actual readability problem (a
+   12-value enum, "DEPARTURE"/"EMERGENCY" the longest), is the one that grows to soak up whatever
+   width the row has left instead of leaving it stranded as dead space after the callsign. */
 .atc-list-head, .atc-row {
   display: grid;
-  grid-template-columns: minmax(84px, 1fr) clamp(70px, 9vw, 96px) clamp(56px, 8vw, 80px)
+  grid-template-columns: minmax(84px, 200px) minmax(110px, 1fr) clamp(56px, 8vw, 80px)
                           clamp(56px, 8vw, 76px) clamp(40px, 6vw, 58px) clamp(56px, 8vw, 76px) clamp(44px, 6vw, 60px);
   gap: clamp(6px, 1.2vw, 12px);
   align-items: center;
