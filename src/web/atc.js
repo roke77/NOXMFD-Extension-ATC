@@ -58,7 +58,15 @@ statusSelectEl.addEventListener('change', () => {
 });
 
 function postCommand(payload) {
-  fetch('/ext/atc/command', { method: 'POST', body: JSON.stringify(payload) });
+  // NOXMFD's command endpoint requires an exact application/json Content-Type (CommandContentType.
+  // IsJson) — fetch() defaults an unadorned string body to text/plain, which the server 415s. Every
+  // command sent through this (both set-status and locate) was silently rejected server-side until
+  // this header was added; the status dropdown's own optimistic local update masked it client-side.
+  fetch('/ext/atc/command', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
 }
 
 function selectRow(id) {
