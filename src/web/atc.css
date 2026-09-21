@@ -31,7 +31,6 @@ html, body {
   border-bottom: 1px solid var(--no-green-dark);
   padding-bottom: clamp(2px, 0.8vh, 6px);
 }
-.atc-title { font-size: clamp(13px, 2.6vmin, 22px); letter-spacing: 0.08em; color: var(--no-green); }
 .atc-hint  { font-size: clamp(8px, 1.4vmin, 12px); color: var(--no-green-dim); }
 
 /* Range presets — same look as TGT's own preset bar (tgt.css's .tgt-preset-btn). */
