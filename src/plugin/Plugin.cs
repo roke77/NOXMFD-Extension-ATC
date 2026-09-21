@@ -11,7 +11,7 @@ namespace AtcModule
     // Pinned to 0.52.0 — the release that added SetUnitColorOverride/ClearUnitColorOverride,
     // SetSelectedUnit, and the "ac"/"pf" contact fields Phase 2 depends on
     // (docs/atc-mfd-plan.md), per EXTENSIONS.md's Versioning section.
-    [BepInDependency("com.roque.NOXMFD", "0.52.0")]
+    [BepInDependency("com.roque.NOXMFD", "0.52.4")]
     [BepInProcess("NuclearOption.exe")]
     [BepInProcess("NuclearOptionServer.exe")]
     public class Plugin : BaseUnityPlugin

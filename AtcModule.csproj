@@ -25,7 +25,7 @@
     <AssemblyName>NOXMFD.AtcModule</AssemblyName>
     <Product>NOXMFD: ATC Module Extension</Product>
     <Description>ATC traffic-management MFD page for NOXMFD, as an extension</Description>
-    <Version>0.1.1</Version>
+    <Version>0.1.2</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <RootNamespace>AtcModule</RootNamespace>

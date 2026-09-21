@@ -2,8 +2,8 @@
 
 ## Status
 
-Phase 1 and Phase 2 are both built, against NOXMFD 0.52.0 (`lib\NOXMFD.dll`, `BepInDependency`
-pinned to `0.52.0`). This records a feasibility pass of
+Phase 1 and Phase 2 are both built, against NOXMFD 0.52.4 (`lib\NOXMFD.dll`, `BepInDependency`
+pinned to `0.52.4`). This records a feasibility pass of
 [roke77/NOXMFD#89](https://github.com/roke77/NOXMFD/issues/89) against NOXMFD's actual telemetry
 and extension API, lays out a phased plan, and records the design decisions below. See
 [What's built](#whats-built) for current state; the one requirement not built is two-way MAP↔ATC
@@ -193,17 +193,17 @@ exploration). Layout-verified against synthetic data. Not yet checked in-game.
 
 | File | What |
 |---|---|
-| [`src/plugin/Plugin.cs`](../src/plugin/Plugin.cs) | Registers the **ATC** EXT page with a command handler (`AtcStatus.HandleCommand`). `BepInDependency` pinned to NOXMFD `0.52.0` — the release `Api.SetUnitColorOverride`/`ClearUnitColorOverride`/`SetSelectedUnit` and the `"ac"`/`"pf"` contact fields shipped in. |
+| [`src/plugin/Plugin.cs`](../src/plugin/Plugin.cs) | Registers the **ATC** EXT page with a command handler (`AtcStatus.HandleCommand`). `BepInDependency` pinned to NOXMFD `0.52.4` — the release `Api.SetSelectedUnitTrack` (TRACK ON MAP) shipped in; `SetUnitColorOverride`/`ClearUnitColorOverride`/`SetSelectedUnit` and the `"ac"`/`"pf"` contact fields go back to `0.52.0`. |
 | [`src/plugin/AtcStatus.cs`](../src/plugin/AtcStatus.cs) | The session-only `unitId → status` map (decision 3), the `set-status`/`locate`/`track` command handlers, the push back to every connected pane via `NOXMFD.Api.PublishSlice`, and the MAP status ring (`Api.SetUnitColorOverride`/`ClearUnitColorOverride`, decision 6), LOCATE ON MAP (`Api.SetSelectedUnit`, decision 7), and TRACK ON MAP (`Api.SetSelectedUnitTrack`) calls. |
 | [`src/web/atc.js`](../src/web/atc.js) | Opens its own `TelemetrySource` (see [Telemetry wiring](#telemetry-wiring)), renders the table (sorted by distance, faction-tinted per TGT's own convention, filtered to `u.ac` aircraft), range-preset filtering, a per-row STATUS `<select>`, row selection (which also fires LOCATE ON MAP), the TRACK ON MAP checkbox, and posts status/locate/track commands to `/ext/atc/command`. |
 | [`src/web/atc.html`](../src/web/atc.html) / [`atc.css`](../src/web/atc.css) | The page itself — header, range-preset bar, table (STATUS is a per-row dropdown), a SELECTED/TRACK ON MAP footer, and a shared `.mfd-empty` no-mission state. |
-| [`lib/NOXMFD.dll`](../lib/NOXMFD.dll) | Committed prebuilt reference, updated to NOXMFD `0.52.0`. |
+| [`lib/NOXMFD.dll`](../lib/NOXMFD.dll) | Committed prebuilt reference, updated to NOXMFD `0.52.4`. |
 
 Not built: the MAP → ATC half of requirement 4's two-way sync (decision 7) — needs its own,
 separate NOXMFD core concept, deliberately left open rather than designed now.
 
 **Verification performed**:
-- `dotnet build -c Release` — 0 errors, deploys against the real NOXMFD `0.52.0` install.
+- `dotnet build -c Release` — 0 errors, deploys against the real NOXMFD `0.52.4` install.
 - No dev-server harness exists for extension pages (`tools/serve_web.py` only mocks NOXMFD's own
   first-party pages), so the real `atc.html`/`atc.css`/`atc.js` were checked against a synthetic
   `TelemetrySource` stub emitting a fixed six-contact frame (mixed factions, mixed `HasDetail`, an
