@@ -22,7 +22,9 @@ remains open, same as before.
 Neither needed NOXMFD core changes. The per-row STATUS is no longer a native `<select>`: its open
 option list is drawn by the browser/OS (light grey, serif) and ignored the page's styling, and
 statuses without a color rule (TAKEOFF, TAXI) fell back to the browser's black text. It's now a
-button opening the page's own themed list, and every status reads in the same green.
+button opening the page's own themed list, and every status reads in the same green. The table no longer scrolls sideways in a narrow pane (an F-35 portal is ~250px wide): a
+container query on the list drops HDG and FUEL below 510px, then ALT and SPD below 340px, leaving
+CALLSIGN/STATUS/DIST, and callsign/status text ellipsis-truncates instead of widening its row.
 
 ## Source ticket
 

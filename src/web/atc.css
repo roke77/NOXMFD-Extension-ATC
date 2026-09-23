@@ -47,7 +47,7 @@ html, body {
   font-size: clamp(9px, 1.4vmin, 12px);
   letter-spacing: 0.06em;
 }
-.atc-range-btns { display: flex; gap: clamp(3px, 0.8vw, 7px); }
+.atc-range-btns { display: flex; flex-wrap: wrap; gap: clamp(3px, 0.8vw, 7px); }
 .atc-range-btn {
   font-family: var(--no-font);
   background: none;
@@ -67,6 +67,7 @@ html, body {
   flex: 1 1 auto;
   min-height: 0;
   display: flex; flex-direction: column;
+  container: atc-list / inline-size;   /* the column set below follows the list's own width */
   border-top: 1px solid var(--no-green-dark);
   padding-top: clamp(3px, 0.8vh, 7px);
 }
@@ -74,7 +75,7 @@ html, body {
   flex: 1 1 auto;
   min-height: 0;
   display: flex; flex-direction: column;
-  overflow: auto;
+  overflow-x: hidden; overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--no-gray) transparent;
 }
@@ -82,7 +83,9 @@ html, body {
 .atc-list-scroll::-webkit-scrollbar-track { background: transparent; }
 .atc-list-scroll::-webkit-scrollbar-thumb { background: var(--no-gray); border-radius: 3px; }
 
-/* CALLSIGN | STATUS | ALT | SPD | HDG | DIST | FUEL */
+/* CALLSIGN | STATUS | ALT | SPD | HDG | DIST | FUEL — narrowed to fit, never scrolled sideways: a
+   narrow pane (an F-35 portal is ~250px) drops the least-needed columns instead (container queries
+   below), and callsign/status text truncates with an ellipsis rather than widening its row. */
 /* CALLSIGN is capped rather than the flexible track — callsigns are short and ellipsis-truncate
    fine (.atc-row > span below) — so STATUS, the column with an actual readability problem (a
    12-value enum, "DEPARTURE"/"EMERGENCY" the longest), is the one that grows to soak up whatever
@@ -93,7 +96,20 @@ html, body {
                           clamp(56px, 8vw, 76px) clamp(40px, 6vw, 58px) clamp(56px, 8vw, 76px) clamp(44px, 6vw, 60px);
   gap: clamp(6px, 1.2vw, 12px);
   align-items: center;
-  min-width: 406px;
+}
+.atc-list-head > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Narrow: HDG and FUEL go first (heading is on MAP, fuel is often blank), then ALT and SPD —
+   CALLSIGN/STATUS/DIST are what an ATC table is for. */
+@container atc-list (max-width: 510px) {
+  .atc-list-head, .atc-row {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px;
+  }
+  .atc-c-hdg, .atc-c-fuel { display: none; }
+}
+@container atc-list (max-width: 340px) {
+  .atc-list-head, .atc-row { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1fr); }
+  .atc-c-alt, .atc-c-spd { display: none; }
 }
 .atc-list-head {
   position: sticky;
@@ -125,7 +141,7 @@ html, body {
 .atc-c-status {
   display: flex; align-items: center; justify-content: space-between;
   gap: 6px;
-  width: 100%;
+  width: 100%; min-width: 0;
   font-family: var(--no-font);
   background: var(--no-panel-bg);
   color: var(--no-green);
@@ -137,7 +153,8 @@ html, body {
   text-align: left;
   cursor: pointer;
 }
-.atc-c-status::after { content: '▾'; color: var(--no-green-dim); }
+.atc-c-status > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.atc-c-status::after { content: '▾'; flex: none; color: var(--no-green-dim); }
 .atc-c-status:hover, .atc-c-status:focus-visible { border-color: var(--no-green); outline: none; }
 
 /* The open STATUS list — fixed-positioned on <body> by atc.js (openStatusMenu) under or over the

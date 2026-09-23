@@ -219,7 +219,7 @@ function render() {
     row.className = 'atc-row ' + factionClass(u.f) + (u.id === selectedId ? ' selected' : '');
     row.innerHTML =
       '<span class="atc-c-name">' + escapeHtml(u.pn || u.t) + '</span>' +
-      '<button type="button" class="atc-c-status">' + status + '</button>' +
+      '<button type="button" class="atc-c-status"><span>' + status + '</span></button>' +
       '<span class="atc-c-alt">' + (u.hd && u.al ? u.al : '—') + '</span>' +
       '<span class="atc-c-spd">' + (u.hd && u.sp ? u.sp : '—') + '</span>' +
       '<span class="atc-c-hdg">' + (u.hd && typeof u.h === 'number' ? fmtHdg(u.h) : '—') + '</span>' +
