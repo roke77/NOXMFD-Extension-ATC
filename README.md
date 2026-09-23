@@ -22,7 +22,9 @@ Built entirely through NOXMFD's public extension API — see NOXMFD's
 - `src/plugin/Plugin.cs` — registers the **ATC** EXT page.
 - `src/plugin/AtcPageAssets.cs` — embedded-resource lookup for `src/web/`'s HTML/CSS/JS.
 - `src/plugin/AtcStatus.cs` — the session-only ATC Status assignment map and its command handler.
-- `src/web/atc.{html,css,js}` — the page itself: traffic table, range presets, ATC Status footer.
+- `src/web/atc.{html,css,js}` — the page itself: traffic table with a per-row ATC Status list,
+  range presets (Metric/Imperial), the SHOW ALL/FRIENDLY/ENEMY filter, and the SELECTED /
+  TRACK ON MAP footer.
 - `docs/` — planning doc (design decisions, phasing, what's built) — see
   [`atc-mfd-plan.md`](docs/atc-mfd-plan.md).
 - `lib/NOXMFD.dll` — compile-time reference only, not shipped to players (NOXMFD is already

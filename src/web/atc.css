@@ -137,7 +137,7 @@ html, body {
 }
 /* Per-row STATUS assignment — a button opening atc.js's own themed list (.atc-status-menu), so a
    controller can set it without selecting the row first. Every status reads in the same green: the
-   value is the information, and a per-status color left some (TAKEOFF, TAXI) with no rule at all. */
+   word itself is the information, and one color stays legible on any row, selected or not. */
 .atc-c-status {
   display: flex; align-items: center; justify-content: space-between;
   gap: 6px;

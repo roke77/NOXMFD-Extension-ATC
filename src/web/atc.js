@@ -116,11 +116,16 @@ function renderRangeUnits(metric) {
   }
 }
 
+// RANGE and SHOW are each a mutually exclusive button group: light the clicked one, unlight the rest.
+function lightOnly(groupEl, btn) {
+  for (const b of groupEl.querySelectorAll('.atc-range-btn')) b.classList.toggle('on', b === btn);
+}
+
 factionBtnsEl.addEventListener('click', (e) => {
   const btn = e.target.closest('.atc-range-btn');
   if (!btn) return;
   factionFilter = btn.dataset.faction;
-  for (const b of factionBtnsEl.querySelectorAll('.atc-range-btn')) b.classList.toggle('on', b === btn);
+  lightOnly(factionBtnsEl, btn);
   render();
 });
 
@@ -128,7 +133,7 @@ rangeBtnsEl.addEventListener('click', (e) => {
   const btn = e.target.closest('.atc-range-btn');
   if (!btn) return;
   rangeKm = Number(btn.dataset.range) || 0;
-  for (const b of rangeBtnsEl.querySelectorAll('.atc-range-btn')) b.classList.toggle('on', b === btn);
+  lightOnly(rangeBtnsEl, btn);
   render();
 });
 
@@ -144,12 +149,16 @@ function postCommand(payload) {
   // command sent through this (set-status, locate, track) was silently rejected server-side until
   // this header was added; the status dropdown's own optimistic local update masked it client-side.
   // keepalive lets a command fired right as the page is torn down (see pagehide below) still land.
+  // A rejected or unreachable command is logged, not thrown: the page keeps working, and the next
+  // frame's published status slice shows what the server actually holds.
   fetch('/ext/atc/command', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
     keepalive: true,
-  });
+  }).then((r) => {
+    if (!r.ok) console.warn('[ATC] command rejected:', payload.cmd, r.status);
+  }, (err) => console.warn('[ATC] command failed:', payload.cmd, err && err.message));
 }
 
 // Click-to-select now doubles as LOCATE ON MAP — a newly selected row (not a click that just
