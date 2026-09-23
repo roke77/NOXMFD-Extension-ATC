@@ -17,6 +17,13 @@ new NOXMFD core surface, `Api.SetSelectedUnitTrack` (`SharedSelection.Track`, th
 in NOXMFD's `docs/atc-extension-support.md`). Still one-way (ATC → MAP); requirement 4's other half
 remains open, same as before.
 
+**Player feedback pass**: the RANGE bar follows the player's Metric/Imperial setting, and a
+**SHOW ALL / FRIENDLY / ENEMY** filter sits at the right end of the same bar (decisions 4 and 8).
+Neither needed NOXMFD core changes. The per-row STATUS is no longer a native `<select>`: its open
+option list is drawn by the browser/OS (light grey, serif) and ignored the page's styling, and
+statuses without a color rule (TAKEOFF, TAXI) fell back to the browser's black text. It's now a
+button opening the page's own themed list, and every status reads in the same green.
+
 ## Source ticket
 
 Player-submitted, [issue #89](https://github.com/roke77/NOXMFD/issues/89): a single-page ATC MFD
@@ -164,8 +171,11 @@ All four shipped in NOXMFD 0.52.0 and are now wired up on this side — see
 4. **Traffic table shows all factions** (friendly, enemy, neutral) — not friendly-only. The
    ticket never states a scope; "detected aircraft" is read literally, matching section 5's
    implication that faction stays visible alongside the status ring. `UnitInfo.Faction`
-   (`TelemetrySnapshot.cs:529`) is already present per row, so this needs no new telemetry — just
-   no client-side faction filter in Phase 1.
+   (`TelemetrySnapshot.cs:529`) is already present per row, so this needs no new telemetry. A
+   player asked to hide enemy aircraft, so the page has a **SHOW ALL / FRIENDLY / ENEMY** filter:
+   mutually exclusive and defaulting to ALL. FRIENDLY is `f === 1` only and ENEMY is `f === 2` only,
+   so neutral/unknown contacts show only under ALL, matching TGT's faction buttons. A selected
+   contact hidden by the filter stays selected, the same as one that left range.
 5. **Fuel is friendly-only, always — built as a peer broadcast, not telemetry** (Phase 2; see
    phasing item (a)). No networked value exists for another aircraft's true current fuel, so it
    can't come through the normal telemetry read the way SPD/ALT/HDG do — instead each pilot's own
@@ -186,6 +196,14 @@ All four shipped in NOXMFD 0.52.0 and are now wired up on this side — see
    direction (MAP → ATC) would need its own, separate NOXMFD core concept — deliberately left open
    rather than designed now.
 
+8. **RANGE follows Metric/Imperial, as fixed real distances.** The presets stay 5/10/25/50/100 km
+   (`data-range`), and only their labels change: in Imperial they read 3/5/13/27/54 NM (rounded),
+   so switching units never changes which aircraft are shown. The unit comes from the frame's
+   top-level `metric` (`TelemetryJson.AppendFrameHeader`, `PlayerSettings.unitSystem`), the same
+   flag the DIST column's `fmtRng` already used. The game's own units option and NOXMFD's Toggle
+   Units keybind both change it, and the labels follow live. ALT/SPD already follow it, since
+   NOXMFD formats them with the game's `UnitConverter`.
+
 ## What's built
 
 **Status**: Phase 1 and Phase 2 both built (except two-way MAP → ATC sync, decision 7 — future
@@ -195,8 +213,8 @@ exploration). Layout-verified against synthetic data. Not yet checked in-game.
 |---|---|
 | [`src/plugin/Plugin.cs`](../src/plugin/Plugin.cs) | Registers the **ATC** EXT page with a command handler (`AtcStatus.HandleCommand`). `BepInDependency` pinned to NOXMFD `0.52.4` — the release `Api.SetSelectedUnitTrack` (TRACK ON MAP) shipped in; `SetUnitColorOverride`/`ClearUnitColorOverride`/`SetSelectedUnit` and the `"ac"`/`"pf"` contact fields go back to `0.52.0`. |
 | [`src/plugin/AtcStatus.cs`](../src/plugin/AtcStatus.cs) | The session-only `unitId → status` map (decision 3), the `set-status`/`locate`/`track` command handlers, the push back to every connected pane via `NOXMFD.Api.PublishSlice`, and the MAP status ring (`Api.SetUnitColorOverride`/`ClearUnitColorOverride`, decision 6), LOCATE ON MAP (`Api.SetSelectedUnit`, decision 7), and TRACK ON MAP (`Api.SetSelectedUnitTrack`) calls. |
-| [`src/web/atc.js`](../src/web/atc.js) | Opens its own `TelemetrySource` (see [Telemetry wiring](#telemetry-wiring)), renders the table (sorted by distance, faction-tinted per TGT's own convention, filtered to `u.ac` aircraft), range-preset filtering, a per-row STATUS `<select>`, row selection (which also fires LOCATE ON MAP), the TRACK ON MAP checkbox, and posts status/locate/track commands to `/ext/atc/command`. |
-| [`src/web/atc.html`](../src/web/atc.html) / [`atc.css`](../src/web/atc.css) | The page itself — header, range-preset bar, table (STATUS is a per-row dropdown), a SELECTED/TRACK ON MAP footer, and a shared `.mfd-empty` no-mission state. |
+| [`src/web/atc.js`](../src/web/atc.js) | Opens its own `TelemetrySource` (see [Telemetry wiring](#telemetry-wiring)), renders the table (sorted by distance, faction-tinted per TGT's own convention, filtered to `u.ac` aircraft), range-preset filtering with Metric/Imperial labels (decision 8), the SHOW ALL/FRIENDLY/ENEMY filter (decision 4), a per-row STATUS button opening the page's own themed status list (`openStatusMenu`), row selection (which also fires LOCATE ON MAP), the TRACK ON MAP checkbox, and posts status/locate/track commands to `/ext/atc/command`. |
+| [`src/web/atc.html`](../src/web/atc.html) / [`atc.css`](../src/web/atc.css) | The page itself — header, range-preset bar with the SHOW faction filter at its right end, table (STATUS is a per-row dropdown), a SELECTED/TRACK ON MAP footer, and a shared `.mfd-empty` no-mission state. |
 | [`lib/NOXMFD.dll`](../lib/NOXMFD.dll) | Committed prebuilt reference, updated to NOXMFD `0.52.4`. |
 
 Not built: the MAP → ATC half of requirement 4's two-way sync (decision 7) — needs its own,
@@ -210,6 +228,11 @@ separate NOXMFD core concept, deliberately left open rather than designed now.
   `ext.atc` status slice) over a local static server: confirmed faction tinting, the `ext.atc`
   status merge, blank ALT/SPD/HDG when `!hd`, distance sort, range-preset filtering, row selection
   (amber outline, footer SELECTED/STATUS populate and enable), and the always-blank fuel column.
+- Player feedback pass, same approach (a local server serving the ATC files, proxying NOXMFD's
+  `/assets` to the serve_web harness, and a fake `EventSource` replaying a five-contact frame):
+  FRIENDLY/ENEMY show only their faction and hide the neutral; the range filter still applies on top;
+  flipping the frame's `metric` relabels RANGE to NM (3/5/13/27/54) and DIST to nm without changing
+  which rows show.
 - Not exercised: the real `/stream` connection, the real `/ext/atc/command` POST round-trip
   (status ring / LOCATE ON MAP included), and the no-mission empty state — all need the actual game
   running NOXMFD + this extension together.

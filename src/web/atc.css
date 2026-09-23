@@ -36,9 +36,12 @@ html, body {
 /* Range presets — same look as TGT's own preset bar (tgt.css's .tgt-preset-btn). */
 .atc-range-bar {
   flex: 0 0 auto;
-  display: flex; align-items: center;
+  display: flex; align-items: center; flex-wrap: wrap;
   gap: clamp(4px, 1vw, 8px);
 }
+/* ALL / FRIENDLY / ENEMY — right end of the same bar, wrapping below the range presets when the
+   pane is too narrow for both. */
+.atc-faction { margin-left: auto; display: flex; align-items: center; gap: clamp(4px, 1vw, 8px); }
 .atc-range-label, .atc-range-unit {
   color: var(--no-green-dim);
   font-size: clamp(9px, 1.4vmin, 12px);
@@ -116,26 +119,58 @@ html, body {
   color: var(--no-green-dim);
   font-variant-numeric: tabular-nums;
 }
-/* Per-row STATUS assignment — a <select>, not plain text, so a controller can set it without
-   selecting the row first. Colored the same way the old read-only span was, keyed off data-status
-   (kept in sync with the live .value by atc.js's change handler, since CSS attribute selectors
-   read the DOM attribute, not the property). */
+/* Per-row STATUS assignment — a button opening atc.js's own themed list (.atc-status-menu), so a
+   controller can set it without selecting the row first. Every status reads in the same green: the
+   value is the information, and a per-status color left some (TAKEOFF, TAXI) with no rule at all. */
 .atc-c-status {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 6px;
+  width: 100%;
   font-family: var(--no-font);
   background: var(--no-panel-bg);
+  color: var(--no-green);
   border: 1px solid var(--no-green-dark);
   border-radius: 3px;
-  padding: clamp(2px, 0.6vh, 5px) clamp(3px, 0.8vw, 6px);
+  padding: clamp(2px, 0.6vh, 5px) clamp(4px, 0.8vw, 7px);
   font-size: 0.85em;
   letter-spacing: 0.02em;
+  text-align: left;
   cursor: pointer;
-  width: 100%;
 }
-.atc-c-status[data-status="ENROUTE"], .atc-c-status[data-status="DEPARTURE"], .atc-c-status[data-status="ARRIVAL"] { color: var(--no-green); }
-.atc-c-status[data-status="HOLDING"], .atc-c-status[data-status="APPROACH"], .atc-c-status[data-status="FINAL"] { color: var(--no-amber); }
-.atc-c-status[data-status="EMERGENCY"] { color: var(--no-red); }
-.atc-c-status[data-status="LANDED"], .atc-c-status[data-status="PARKED"] { color: var(--no-green-dim); }
-.atc-c-status[data-status="UNKNOWN"] { color: var(--no-gray); }
+.atc-c-status::after { content: '▾'; color: var(--no-green-dim); }
+.atc-c-status:hover, .atc-c-status:focus-visible { border-color: var(--no-green); outline: none; }
+
+/* The open STATUS list — fixed-positioned on <body> by atc.js (openStatusMenu) under or over the
+   button that opened it. */
+.atc-status-menu {
+  position: fixed;
+  z-index: 10;
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+  background: var(--no-bg);
+  border: 1px solid var(--no-green);
+  border-radius: 3px;
+  padding: 2px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+  scrollbar-width: thin;
+  scrollbar-color: var(--no-gray) transparent;
+}
+.atc-status-menu[hidden] { display: none; }
+.atc-status-item {
+  font-family: var(--no-font);
+  background: none;
+  color: var(--no-green-dim);
+  border: none;
+  border-radius: 2px;
+  padding: clamp(4px, 0.9vh, 7px) clamp(6px, 1vw, 10px);
+  font-size: clamp(10px, 1.6vmin, 14px);
+  letter-spacing: 0.02em;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.atc-status-item:hover, .atc-status-item:focus-visible { background: rgba(var(--no-green-rgb), 0.14); color: var(--no-green); outline: none; }
+.atc-status-item.on { color: var(--no-green); background: rgba(var(--no-green-rgb), 0.08); }
 
 /* The clicked/selected row — same amber outline convention TGT uses for its own focused row
    (tgt.css's .tl-row.tgt-focused). */

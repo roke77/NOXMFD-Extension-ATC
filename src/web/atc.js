@@ -11,18 +11,77 @@ const rowsEl = document.getElementById('rows');
 const emptyEl = document.getElementById('list-empty');
 const selectedLineEl = document.getElementById('selected-line');
 const rangeBtnsEl = document.getElementById('range-btns');
+const rangeUnitEl = document.getElementById('range-unit');
+const factionBtnsEl = document.getElementById('faction-btns');
 const trackCheckboxEl = document.getElementById('track-checkbox');
 
 const STATUS_VALUES = ['UNKNOWN', 'PARKED', 'TAXI', 'TAKEOFF', 'DEPARTURE', 'ENROUTE', 'HOLDING',
   'ARRIVAL', 'APPROACH', 'FINAL', 'LANDED', 'EMERGENCY'];
-function statusOptionsHtml(selected) {
-  return STATUS_VALUES.map(function(s) {
-    return '<option value="' + s + '"' + (s === selected ? ' selected' : '') + '>' + s + '</option>';
-  }).join('');
+
+// Per-row STATUS picker — the page's own themed list rather than a native <select>, whose open
+// option list is drawn by the browser/OS (light grey, serif) and ignores the page's CSS entirely.
+// The list is one element on <body>, not inside the row, so the ~10 Hz row rebuild can't tear it
+// down; render() also holds the rows still while it's open (see render()).
+const statusMenuEl = document.createElement('div');
+statusMenuEl.className = 'atc-status-menu';
+statusMenuEl.hidden = true;
+document.body.appendChild(statusMenuEl);
+let statusMenuUnitId = 0;   // unit whose status the open list sets; 0 = closed
+
+function openStatusMenu(unitId, anchor) {
+  statusMenuUnitId = unitId;
+  const current = statusById[unitId] || 'UNKNOWN';
+  statusMenuEl.textContent = '';
+  for (const s of STATUS_VALUES) {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'atc-status-item' + (s === current ? ' on' : '');
+    item.textContent = s;
+    item.addEventListener('click', () => setStatus(unitId, s));
+    statusMenuEl.appendChild(item);
+  }
+  statusMenuEl.hidden = false;
+  // Below the button, or above it when there's more room there; capped to the room available so a
+  // short pane scrolls the list instead of pushing it off-screen.
+  const r = anchor.getBoundingClientRect();
+  const below = window.innerHeight - r.bottom - 4, above = r.top - 4;
+  const openUp = below < statusMenuEl.scrollHeight && above > below;
+  statusMenuEl.style.left = r.left + 'px';
+  statusMenuEl.style.minWidth = r.width + 'px';
+  statusMenuEl.style.maxHeight = Math.max(80, openUp ? above : below) + 'px';
+  statusMenuEl.style.top = openUp ? '' : r.bottom + 2 + 'px';
+  statusMenuEl.style.bottom = openUp ? window.innerHeight - r.top + 2 + 'px' : '';
+  statusMenuEl.querySelector('.on')?.scrollIntoView({ block: 'nearest' });
 }
+
+function closeStatusMenu() {
+  if (!statusMenuUnitId) return;
+  statusMenuUnitId = 0;
+  statusMenuEl.hidden = true;
+  render();   // catch up on the frames held back while it was open
+}
+
+function setStatus(unitId, status) {
+  postCommand({ cmd: 'set-status', id: unitId, status });
+  // Optimistic local update — the next frame's published slice confirms/overwrites it, but there's
+  // no reason to wait a tick to reflect the controller's own pick.
+  statusById[unitId] = status;
+  closeStatusMenu();
+}
+
+document.addEventListener('mousedown', (e) => {
+  if (statusMenuUnitId && !statusMenuEl.contains(e.target) && !e.target.closest('.atc-c-status')) closeStatusMenu();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeStatusMenu(); });
+// The list is positioned against the button once; if the table scrolls or the pane resizes, the
+// button moves out from under it, so close rather than leave it floating in the wrong place.
+document.querySelector('.atc-list-scroll').addEventListener('scroll', closeStatusMenu);
+window.addEventListener('resize', closeStatusMenu);
 
 let lastFrame = null;      // the raw frame from the last onFrame — re-rendered on a range change too
 let rangeKm = 0;           // 0 = ALL
+let factionFilter = 'all'; // 'all' | 'friendly' | 'enemy' — neutrals only ever show under 'all'
+let rangeMetric = null;    // unit the RANGE labels currently show (frame's `metric`); null = not drawn yet
 let selectedId = 0;        // 0 = nothing selected
 let statusById = {};       // unitId -> status string, from this extension's own published slice
 let trackOn = false;       // TRACK ON MAP checkbox state, mirrored to NOXMFD via the 'track' command
@@ -42,6 +101,28 @@ function fmtFuel(pf) {
 function factionClass(f) {
   return f === 1 ? 'f-friendly' : f === 2 ? 'f-enemy' : 'f-neutral';
 }
+
+// The RANGE presets are fixed real distances (data-range, in km) — only their labels follow the
+// player's Metric/Imperial setting (the frame's top-level `metric`, which the game's units option
+// and NOXMFD's Toggle Units keybind both change), so switching units never changes what's shown.
+const KM_PER_NM = 1.852;
+function renderRangeUnits(metric) {
+  if (metric === rangeMetric) return;
+  rangeMetric = metric;
+  rangeUnitEl.textContent = metric ? 'KM' : 'NM';
+  for (const b of rangeBtnsEl.querySelectorAll('.atc-range-btn')) {
+    const km = Number(b.dataset.range);
+    if (km > 0) b.textContent = metric ? String(km) : String(Math.round(km / KM_PER_NM));
+  }
+}
+
+factionBtnsEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('.atc-range-btn');
+  if (!btn) return;
+  factionFilter = btn.dataset.faction;
+  for (const b of factionBtnsEl.querySelectorAll('.atc-range-btn')) b.classList.toggle('on', b === btn);
+  render();
+});
 
 rangeBtnsEl.addEventListener('click', (e) => {
   const btn = e.target.closest('.atc-range-btn');
@@ -103,12 +184,14 @@ function render() {
   const d = lastFrame;
   const contacts = Array.isArray(d.contacts) ? d.contacts : [];
   const world = d.world;
+  renderRangeUnits(!!d.metric);
 
   const contactsById = {};
   const rows = [];
   for (const u of contacts) {
     if (!u.ac) continue;
-    contactsById[u.id] = u;
+    contactsById[u.id] = u;   // before the faction/range filters: the footer still names a filtered-out selection
+    if (factionFilter === 'friendly' ? u.f !== 1 : factionFilter === 'enemy' ? u.f !== 2 : false) continue;
     let dist = null;
     if (world) {
       const dx = u.x - world.x, dz = u.z - world.z;
@@ -120,12 +203,11 @@ function render() {
   rows.sort((a, b) => (a.dist ?? Infinity) - (b.dist ?? Infinity));
 
   // ponytail: render() runs on every ~10 Hz telemetry frame and rebuilds the whole row list from
-  // scratch (rowsEl.textContent = '' below) — fine for plain text, but a live rebuild would yank a
-  // status <select> out from under a pilot mid-pick, closing it before they can choose. Skip the
-  // rebuild entirely while one has focus rather than diffing per-row; the list is stale for at most
-  // a frame or two and self-heals the moment they blur it. A real fix would reuse row elements by
-  // id instead of wiping the list every frame.
-  if (rowsEl.contains(document.activeElement) && document.activeElement.classList.contains('atc-c-status')) {
+  // scratch (rowsEl.textContent = '' below) — fine for plain text, but a rebuild while the STATUS
+  // list is open would move rows out from under it mid-pick. Skip the rebuild entirely while it's
+  // open rather than diffing per-row; the rows are stale only until it closes (closeStatusMenu
+  // re-renders). A real fix would reuse row elements by id instead of wiping the list every frame.
+  if (statusMenuUnitId) {
     updateFooter(contactsById);
     return;
   }
@@ -137,24 +219,20 @@ function render() {
     row.className = 'atc-row ' + factionClass(u.f) + (u.id === selectedId ? ' selected' : '');
     row.innerHTML =
       '<span class="atc-c-name">' + escapeHtml(u.pn || u.t) + '</span>' +
-      '<select class="atc-c-status" data-status="' + status + '">' + statusOptionsHtml(status) + '</select>' +
+      '<button type="button" class="atc-c-status">' + status + '</button>' +
       '<span class="atc-c-alt">' + (u.hd && u.al ? u.al : '—') + '</span>' +
       '<span class="atc-c-spd">' + (u.hd && u.sp ? u.sp : '—') + '</span>' +
       '<span class="atc-c-hdg">' + (u.hd && typeof u.h === 'number' ? fmtHdg(u.h) : '—') + '</span>' +
       '<span class="atc-c-dist">' + fmtRng(dist, d.metric) + '</span>' +
       '<span class="atc-c-fuel">' + fmtFuel(u.pf) + '</span>';
-    // The row itself is the select action (also fires LOCATE ON MAP, see selectRow) — the status
-    // dropdown lives inside the same row, so its own clicks must not bubble into that.
-    row.addEventListener('click', (e) => { if (!e.target.closest('select')) selectRow(u.id); });
-    const statusSel = row.querySelector('.atc-c-status');
-    statusSel.addEventListener('click', (e) => e.stopPropagation());
-    statusSel.addEventListener('change', () => {
-      postCommand({ cmd: 'set-status', id: u.id, status: statusSel.value });
-      // Optimistic local update (and the dataset attribute the color-by-status CSS reads) — the
-      // next frame's published slice will confirm/overwrite this, but there's no reason to wait a
-      // tick to reflect the pilot's own pick.
-      statusById[u.id] = statusSel.value;
-      statusSel.dataset.status = statusSel.value;
+    // The row itself is the select action (also fires LOCATE ON MAP, see selectRow) — the STATUS
+    // button lives inside the same row, so its own clicks must not bubble into that.
+    row.addEventListener('click', (e) => { if (!e.target.closest('.atc-c-status')) selectRow(u.id); });
+    const statusBtn = row.querySelector('.atc-c-status');
+    statusBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (statusMenuUnitId === u.id) closeStatusMenu();
+      else openStatusMenu(u.id, statusBtn);
     });
     rowsEl.appendChild(row);
   }

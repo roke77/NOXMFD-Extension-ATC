@@ -23,7 +23,15 @@
         <button class="atc-range-btn" data-range="100">100</button>
         <button class="atc-range-btn on" data-range="0">ALL</button>
       </div>
-      <span class="atc-range-unit">KM</span>
+      <span class="atc-range-unit" id="range-unit">KM</span>
+      <div class="atc-faction">
+        <span class="atc-range-label">SHOW</span>
+        <div class="atc-range-btns" id="faction-btns">
+          <button class="atc-range-btn on" data-faction="all">ALL</button>
+          <button class="atc-range-btn" data-faction="friendly">FRIENDLY</button>
+          <button class="atc-range-btn" data-faction="enemy">ENEMY</button>
+        </div>
+      </div>
     </div>
 
     <div class="atc-list">
@@ -32,7 +40,7 @@
       </div>
       <div class="atc-list-scroll">
         <div class="atc-list-rows" id="rows"></div>
-        <div class="atc-list-empty" id="list-empty">NO CONTACTS IN RANGE</div>
+        <div class="atc-list-empty" id="list-empty">NO MATCHING CONTACTS</div>
       </div>
     </div>
 
