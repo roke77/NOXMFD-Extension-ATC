@@ -1,7 +1,7 @@
-/* ATC page (docs/atc-mfd-plan.md). Green-phosphor MFD theme via the shared --no-*
-   tokens; faction accents (friendly blue / enemy red) echo TGT's own tgt.css, which is why this
-   defines its own --atc-blue rather than reading --no-blue (that token is a different, mod-only
-   decorative accent — see tgt.css's own comment on --tgt-blue). */
+/* ATC page (docs/atc-mfd-plan.md). Green-phosphor MFD theme via the shared --no-* tokens;
+   faction accents (friendly blue / enemy red) match NOXMFD's --no-friendly-blue (colors.css),
+   which is why this defines its own --atc-blue rather than reading --no-blue (that token is a
+   different, mod-only decorative accent). */
 
 :root { --atc-blue: #4aa3ff; }
 
