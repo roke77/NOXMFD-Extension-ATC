@@ -22,9 +22,12 @@ Built entirely through NOXMFD's public extension API — see NOXMFD's
 - `src/plugin/Plugin.cs` — registers the **ATC** EXT page.
 - `src/plugin/AtcPageAssets.cs` — embedded-resource lookup for `src/web/`'s HTML/CSS/JS.
 - `src/plugin/AtcStatus.cs` — the session-only ATC Status assignment map and its command handler.
-- `src/web/atc.{html,css,js}` — the page itself: traffic table with a per-row ATC Status list,
-  range presets (Metric/Imperial), the SHOW ALL/FRIENDLY/ENEMY filter, and the SELECTED /
-  TRACK ON MAP footer.
+- `src/web/atc.{html,css,js}` — the page itself, in NOXMFD's Lit Panel style: lit RANGE and SHOW
+  (FRIENDLY / ENEMY) buttons, the traffic table (callsign with the pilot's Steam name beneath, type,
+  status badge, ALT / SPD / HDG / DIST / FUEL), and an action bar for the selected aircraft: STATUS
+  (opens a list of the 11 statuses), CLEAR STATUS, LOCATE ON MAP and TRACK ON MAP.
+- `tools/preview.py` — browser preview with mock traffic, no game needed
+  (`python tools/preview.py [port]`).
 - `docs/` — planning doc (design decisions, phasing, what's built) — see
   [`atc-mfd-plan.md`](docs/atc-mfd-plan.md).
 - `lib/NOXMFD.dll` — compile-time reference only, not shipped to players (NOXMFD is already

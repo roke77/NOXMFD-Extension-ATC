@@ -5,38 +5,40 @@
   <title>ATC</title>
   <link rel="stylesheet" href="/assets/shared/font.css">
   <link rel="stylesheet" href="/assets/shared/theme.css">
+  <link rel="stylesheet" href="/assets/shared/lit-panel.css">
   <link rel="stylesheet" href="/ext/atc/atc.css">
 </head>
 <body>
   <div class="atc-panel">
     <div class="atc-head">
-      <span class="atc-hint">click row = select</span>
+      <span class="atc-title">AIR TRAFFIC CONTROL</span>
+      <span class="atc-count" id="count"></span>
     </div>
 
-    <div class="atc-range-bar">
-      <span class="atc-range-label">RANGE</span>
-      <div class="atc-range-btns" id="range-btns">
-        <button class="atc-range-btn" data-range="5">5</button>
-        <button class="atc-range-btn" data-range="10">10</button>
-        <button class="atc-range-btn" data-range="25">25</button>
-        <button class="atc-range-btn" data-range="50">50</button>
-        <button class="atc-range-btn" data-range="100">100</button>
-        <button class="atc-range-btn on" data-range="0">ALL</button>
+    <div class="atc-filters">
+      <div class="atc-filter">
+        <span class="atc-label">RANGE · <span id="range-unit">KM</span></span>
+        <div class="atc-btn-row atc-range" id="range-btns">
+          <button type="button" class="lit atc-btn" data-range="5">5</button>
+          <button type="button" class="lit atc-btn" data-range="10">10</button>
+          <button type="button" class="lit atc-btn" data-range="25">25</button>
+          <button type="button" class="lit atc-btn" data-range="50">50</button>
+          <button type="button" class="lit atc-btn" data-range="100">100</button>
+          <button type="button" class="lit atc-btn on" data-range="0">ALL</button>
+        </div>
       </div>
-      <span class="atc-range-unit" id="range-unit">KM</span>
-      <div class="atc-faction">
-        <span class="atc-range-label">SHOW</span>
-        <div class="atc-range-btns" id="faction-btns">
-          <button class="atc-range-btn on" data-faction="all">ALL</button>
-          <button class="atc-range-btn" data-faction="friendly">FRIENDLY</button>
-          <button class="atc-range-btn" data-faction="enemy">ENEMY</button>
+      <div class="atc-filter">
+        <span class="atc-label">SHOW</span>
+        <div class="atc-btn-row atc-show" id="faction-btns">
+          <button type="button" class="lit atc-btn on" data-faction="friendly" style="--accent: var(--no-friendly-blue)">FRIENDLY</button>
+          <button type="button" class="lit atc-btn on" data-faction="enemy" style="--accent: var(--no-red)">ENEMY</button>
         </div>
       </div>
     </div>
 
     <div class="atc-list">
       <div class="atc-list-head">
-        <span class="atc-c-name">CALLSIGN</span><span class="atc-c-status-h">STATUS</span><span class="atc-c-alt">ALT</span><span class="atc-c-spd">SPD</span><span class="atc-c-hdg">HDG</span><span class="atc-c-dist">DIST</span><span class="atc-c-fuel">FUEL</span>
+        <span class="atc-c-name">CALLSIGN</span><span class="atc-c-type">TYPE</span><span class="atc-c-status">STATUS</span><span class="atc-c-alt">ALT</span><span class="atc-c-spd">SPD</span><span class="atc-c-hdg">HDG</span><span class="atc-c-dist">DIST</span><span class="atc-c-fuel">FUEL</span>
       </div>
       <div class="atc-list-scroll">
         <div class="atc-list-rows" id="rows"></div>
@@ -45,12 +47,20 @@
     </div>
 
     <div class="atc-footer">
-      <div class="atc-selected" id="selected-line">SELECTED: <span class="atc-none">NONE</span></div>
-      <label class="atc-track-label" id="track-label">
-        <input type="checkbox" id="track-checkbox" disabled>
-        TRACK ON MAP
-      </label>
+      <div class="atc-selected" id="selected-line">SELECTED <span class="atc-none">NONE</span></div>
+      <div class="atc-actions">
+        <button type="button" class="atc-action" id="status-btn" aria-haspopup="listbox" aria-expanded="false" disabled><span class="atc-caret">▲</span><span id="status-btn-label">STATUS</span></button>
+        <button type="button" class="atc-action atc-clear" id="clear-btn" disabled>CLEAR STATUS</button>
+        <button type="button" class="atc-action atc-locate" id="locate-btn" disabled>LOCATE ON MAP</button>
+        <button type="button" class="lit atc-action atc-track" id="track-btn" aria-pressed="false" style="--accent: var(--no-amber)" disabled>TRACK ON MAP</button>
+      </div>
     </div>
+  </div>
+
+  <div class="atc-scrim" id="status-scrim" hidden></div>
+  <div class="atc-status-menu" id="status-menu" role="listbox" aria-label="Set status" hidden>
+    <div class="atc-status-head"><span class="atc-label">SET STATUS</span><span id="status-menu-name"></span></div>
+    <div class="atc-status-grid" id="status-grid"></div>
   </div>
 
   <div class="mfd-empty" id="no-mission">

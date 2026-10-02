@@ -1,9 +1,6 @@
-/* ATC page (docs/atc-mfd-plan.md). Green-phosphor MFD theme via the shared --no-* tokens;
-   faction accents (friendly blue / enemy red) match NOXMFD's --no-friendly-blue (colors.css),
-   which is why this defines its own --atc-blue rather than reading --no-blue (that token is a
-   different, mod-only decorative accent). */
-
-:root { --atc-blue: #4aa3ff; }
+/* ATC page (docs/atc-mfd-plan.md). "Lit Panel" look shared with NOXMFD's TGT and HUD pages: lamp
+   pushbuttons (shared/lit-panel.css), boxed badges, faction-coloured callsigns. Faction accents
+   come from the shared --no-* tokens (colors.css). */
 
 * { box-sizing: border-box; }
 
@@ -20,47 +17,48 @@ html, body {
 .atc-panel {
   height: 100%;
   display: flex; flex-direction: column;
-  gap: clamp(4px, 1.4vh, 12px);
+  gap: clamp(6px, 1.6vh, 14px);
   padding: clamp(6px, 1.8vmin, 16px);
   padding-left: clamp(34px, 5vw, 48px);
   padding-right: clamp(34px, 5vw, 48px);
 }
 
 .atc-head {
-  display: flex; align-items: baseline; justify-content: space-between;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
   border-bottom: 1px solid var(--no-green-dark);
-  padding-bottom: clamp(2px, 0.8vh, 6px);
+  padding-bottom: clamp(2px, 0.8vh, 8px);
 }
-.atc-hint  { font-size: clamp(8px, 1.4vmin, 12px); color: var(--no-green-dim); }
+.atc-title {
+  font-size: clamp(14px, 3.2vmin, 26px);
+  font-weight: bold;
+  letter-spacing: 0.2em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.atc-count { font-size: clamp(9px, 1.5vmin, 13px); letter-spacing: 0.15em; color: var(--no-control-text-off); white-space: nowrap; }
+.atc-count b { color: var(--no-amber); font-weight: normal; }
+.atc-count i { color: var(--no-squad); font-style: normal; }
 
-/* Range presets — same look as TGT's own preset bar (tgt.css's .tgt-preset-btn). */
-.atc-range-bar {
+/* ── RANGE / SHOW: lit pushbuttons, side by side, stacking in a narrow pane ──────────────── */
+.atc-filters {
   flex: 0 0 auto;
-  display: flex; align-items: center; flex-wrap: wrap;
-  gap: clamp(4px, 1vw, 8px);
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: clamp(8px, 2vw, 18px);
+  container: atc-filters / inline-size;
 }
-/* ALL / FRIENDLY / ENEMY — right end of the same bar, wrapping below the range presets when the
-   pane is too narrow for both. */
-.atc-faction { margin-left: auto; display: flex; align-items: center; gap: clamp(4px, 1vw, 8px); }
-.atc-range-label, .atc-range-unit {
-  color: var(--no-green-dim);
-  font-size: clamp(9px, 1.4vmin, 12px);
-  letter-spacing: 0.06em;
+@container atc-filters (max-width: 460px) { .atc-filters { grid-template-columns: minmax(0, 1fr); } }
+.atc-filter { display: flex; flex-direction: column; gap: clamp(3px, 0.6vh, 6px); min-width: 0; }
+.atc-label { font-size: clamp(8px, 1.4vmin, 12px); letter-spacing: 0.3em; color: var(--no-control-text-off); }
+.atc-btn-row { display: grid; gap: clamp(3px, 0.7vw, 6px); }
+.atc-range { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.atc-show  { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.atc-btn {
+  --lamp-w: 2.1em;
+  gap: clamp(3px, 0.6vmin, 7px);
+  height: clamp(30px, 6.2vmin, 50px);
+  font-size: clamp(10px, 1.9vmin, 16px);
+  letter-spacing: 0.08em;
 }
-.atc-range-btns { display: flex; flex-wrap: wrap; gap: clamp(3px, 0.8vw, 7px); }
-.atc-range-btn {
-  font-family: var(--no-font);
-  background: none;
-  color: var(--no-green-dim);
-  border: 1px solid var(--no-green-dark);
-  border-radius: 3px;
-  padding: clamp(4px, 1vh, 8px) clamp(7px, 1.4vw, 12px);
-  font-size: clamp(9px, 1.6vmin, 13px);
-  letter-spacing: 0.03em;
-  cursor: pointer;
-}
-.atc-range-btn.on { color: var(--no-green); border-color: var(--no-green); }
-.atc-range-btn:active { background: rgba(var(--no-green-rgb), 0.10); }
 
 /* ── Traffic list ──────────────────────────────────────────────────────────────────────── */
 .atc-list {
@@ -68,8 +66,6 @@ html, body {
   min-height: 0;
   display: flex; flex-direction: column;
   container: atc-list / inline-size;   /* the column set below follows the list's own width */
-  border-top: 1px solid var(--no-green-dark);
-  padding-top: clamp(3px, 0.8vh, 7px);
 }
 .atc-list-scroll {
   flex: 1 1 auto;
@@ -83,29 +79,25 @@ html, body {
 .atc-list-scroll::-webkit-scrollbar-track { background: transparent; }
 .atc-list-scroll::-webkit-scrollbar-thumb { background: var(--no-gray); border-radius: 3px; }
 
-/* CALLSIGN | STATUS | ALT | SPD | HDG | DIST | FUEL — narrowed to fit, never scrolled sideways: a
-   narrow pane (an F-35 portal is ~250px) drops the least-needed columns instead (container queries
-   below), and callsign/status text truncates with an ellipsis rather than widening its row. */
-/* CALLSIGN is capped rather than the flexible track — callsigns are short and ellipsis-truncate
-   fine (.atc-row > span below) — so STATUS, the column with an actual readability problem (a
-   12-value enum, "DEPARTURE"/"EMERGENCY" the longest), is the one that grows to soak up whatever
-   width the row has left instead of leaving it stranded as dead space after the callsign. */
+/* CALLSIGN | TYPE | STATUS | ALT | SPD | HDG | DIST | FUEL — narrowed to fit, never scrolled
+   sideways: a narrow pane (an F-35 portal is ~250px) drops the least-needed columns instead
+   (container queries below), and text truncates with an ellipsis rather than widening its row. */
 .atc-list-head, .atc-row {
   display: grid;
-  grid-template-columns: minmax(84px, 200px) minmax(110px, 1fr) clamp(56px, 8vw, 80px)
-                          clamp(56px, 8vw, 76px) clamp(40px, 6vw, 58px) clamp(56px, 8vw, 76px) clamp(44px, 6vw, 60px);
+  grid-template-columns: minmax(84px, 1fr) minmax(56px, 0.55fr) clamp(86px, 13vw, 120px) clamp(56px, 8vw, 84px)
+                          clamp(44px, 6.5vw, 62px) clamp(40px, 6vw, 54px) clamp(56px, 8vw, 78px) clamp(36px, 5vw, 50px);
   gap: clamp(6px, 1.2vw, 12px);
   align-items: center;
 }
 .atc-list-head > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Narrow: HDG and FUEL go first (heading is on MAP, fuel is often blank), then ALT and SPD —
-   CALLSIGN/STATUS/DIST are what an ATC table is for. */
-@container atc-list (max-width: 510px) {
+/* Narrow: TYPE, HDG and FUEL go first, then ALT and SPD — CALLSIGN/STATUS/DIST are what an ATC
+   table is for. */
+@container atc-list (max-width: 600px) {
   .atc-list-head, .atc-row {
     grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
     gap: 6px;
   }
-  .atc-c-hdg, .atc-c-fuel { display: none; }
+  .atc-c-type, .atc-c-hdg, .atc-c-fuel { display: none; }
 }
 @container atc-list (max-width: 340px) {
   .atc-list-head, .atc-row { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1fr); }
@@ -114,84 +106,56 @@ html, body {
 .atc-list-head {
   position: sticky;
   top: 0;
+  z-index: 1;
   background: var(--no-bg);
-  padding: 0 clamp(4px, 1vw, 10px) clamp(2px, 0.6vh, 5px);
+  padding: clamp(2px, 0.6vh, 6px) clamp(4px, 1vw, 10px);
   color: var(--no-green-dim);
   font-size: clamp(9px, 1.4vmin, 13px);
-  letter-spacing: 0.06em;
-  border-bottom: 1px solid var(--no-green-dark);
+  letter-spacing: 0.22em;
 }
 .atc-row {
-  padding: clamp(4px, 1vh, 9px) clamp(4px, 1vw, 10px);
+  padding: clamp(4px, 0.9vh, 8px) clamp(4px, 1vw, 10px);
   border-bottom: 1px solid rgba(var(--no-green-rgb), 0.10);
-  font-size: clamp(10px, 1.7vmin, 15px);
+  font-size: clamp(11px, 2vmin, 16px);
   cursor: pointer;
 }
 .atc-row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.atc-row.f-friendly .atc-c-name { color: var(--atc-blue); }
-.atc-row.f-neutral  .atc-c-name { color: var(--no-label); }
-.atc-row.f-enemy    .atc-c-name { color: var(--no-red); }
-.atc-c-alt, .atc-c-spd, .atc-c-hdg, .atc-c-dist, .atc-c-fuel {
-  color: var(--no-green-dim);
-  font-variant-numeric: tabular-nums;
+.atc-c-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.atc-c-name b { font-weight: normal; font-size: 1.12em; overflow: hidden; text-overflow: ellipsis; }
+.atc-c-name i {
+  font-style: normal; font-size: 0.75em; letter-spacing: 0.05em;
+  color: var(--no-squad);
+  overflow: hidden; text-overflow: ellipsis;
 }
-/* Per-row STATUS assignment — a button opening atc.js's own themed list (.atc-status-menu), so a
-   controller can set it without selecting the row first. Every status reads in the same green: the
-   word itself is the information, and one color stays legible on any row, selected or not. */
-.atc-c-status {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 6px;
-  width: 100%; min-width: 0;
-  font-family: var(--no-font);
-  background: var(--no-panel-bg);
-  color: var(--no-green);
-  border: 1px solid var(--no-green-dark);
-  border-radius: 3px;
-  padding: clamp(2px, 0.6vh, 5px) clamp(4px, 0.8vw, 7px);
-  font-size: 0.85em;
-  letter-spacing: 0.02em;
-  text-align: left;
-  cursor: pointer;
-}
-.atc-c-status > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.atc-c-status::after { content: '▾'; flex: none; color: var(--no-green-dim); }
-.atc-c-status:hover, .atc-c-status:focus-visible { border-color: var(--no-green); outline: none; }
+.atc-c-name i.plain { color: var(--no-control-text-off); }
+.atc-row.f-friendly .atc-c-name b { color: var(--no-friendly-blue); }
+.atc-row.f-neutral  .atc-c-name b { color: var(--no-label); }
+.atc-row.f-enemy    .atc-c-name b { color: var(--no-red); }
+/* A pilot running NOXMFD (their callsign is the name, with the Steam name beneath) reads bold. */
+.atc-row.noxmfd .atc-c-name b { font-weight: bold; }
+.atc-c-type { color: var(--no-label); font-size: 0.88em; }
+.atc-c-alt, .atc-c-spd, .atc-c-hdg, .atc-c-dist, .atc-c-fuel { font-variant-numeric: tabular-nums; }
+.atc-c-fuel.warn { color: var(--no-amber); }
+.atc-c-fuel.low  { color: var(--no-red); }
+.atc-c-fuel.none { color: var(--no-gray); }
 
-/* The open STATUS list — fixed-positioned on <body> by atc.js (openStatusMenu) under or over the
-   button that opened it. */
-.atc-status-menu {
-  position: fixed;
-  z-index: 10;
-  display: flex; flex-direction: column;
-  overflow-y: auto;
-  background: var(--no-bg);
+/* STATUS badge — the colours match the MAP ring (AtcStatus.cs ColorFor): green flow, amber
+   HOLDING, red EMERGENCY. An unassigned unit shows a dashed dim dash rather than "UNKNOWN". */
+.atc-badge {
+  display: inline-block; max-width: 100%;
+  padding: 0.15em 0.5em;
+  font-size: 0.78em; letter-spacing: 0.12em;
   border: 1px solid var(--no-green);
-  border-radius: 3px;
-  padding: 2px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
-  scrollbar-width: thin;
-  scrollbar-color: var(--no-gray) transparent;
+  color: var(--no-green);
+  overflow: hidden; text-overflow: ellipsis; vertical-align: middle;
 }
-.atc-status-menu[hidden] { display: none; }
-.atc-status-item {
-  font-family: var(--no-font);
-  background: none;
-  color: var(--no-green-dim);
-  border: none;
-  border-radius: 2px;
-  padding: clamp(4px, 0.9vh, 7px) clamp(6px, 1vw, 10px);
-  font-size: clamp(10px, 1.6vmin, 14px);
-  letter-spacing: 0.02em;
-  text-align: left;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.atc-status-item:hover, .atc-status-item:focus-visible { background: rgba(var(--no-green-rgb), 0.14); color: var(--no-green); outline: none; }
-.atc-status-item.on { color: var(--no-green); background: rgba(var(--no-green-rgb), 0.08); }
+.atc-badge.holding   { border-color: var(--no-amber); color: var(--no-amber); }
+.atc-badge.emergency { border-color: var(--no-red); color: var(--no-red); background: rgba(var(--no-red-rgb), 0.14); }
+.atc-badge.none      { border: 1px dashed var(--no-line); color: var(--no-lamp-off); }
 
 /* The clicked/selected row — same amber outline convention TGT uses for its own focused row
    (tgt.css's .tl-row.tgt-focused). */
-.atc-row.selected { outline: 1px solid var(--no-amber); outline-offset: -1px; background: rgba(255,170,0,0.08); }
+.atc-row.selected { outline: 2px solid var(--no-amber); outline-offset: -2px; background: rgba(var(--no-amber-rgb), 0.06); }
 
 .atc-list-empty {
   flex: 1 1 auto;
@@ -201,38 +165,86 @@ html, body {
 }
 .atc-list-rows:not(:empty) + .atc-list-empty { display: none; }
 
-/* ── Footer: SELECTED / TRACK ON MAP ───────────────────────────────────────────────────────
-   STATUS moved into each row (a controller sets it without selecting the row first) and LOCATE ON
-   MAP is now automatic on select, so the footer is just the current pick and the follow toggle.
-   The checkbox is disabled until a row is selected (atc.js's updateFooter). */
+/* ── Footer: the selected aircraft and the actions on it ─────────────────────────────────── */
 .atc-footer {
   flex: 0 0 auto;
-  display: flex; align-items: center;
-  gap: clamp(8px, 1.6vw, 14px);
-  padding-top: clamp(3px, 0.8vh, 7px);
-  border-top: 1px solid var(--no-green-dark);
+  display: flex; flex-direction: column;
+  gap: clamp(4px, 1vh, 8px);
+  container: atc-footer / inline-size;
 }
 .atc-selected {
-  flex: 1 1 auto;
+  display: flex; align-items: baseline; gap: 0.8em;
   min-width: 0;
-  color: var(--no-green-dim);
-  font-size: clamp(10px, 1.7vmin, 14px);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.atc-selected .atc-none { color: var(--no-green-dark); }
-.atc-track-label {
-  flex: 0 0 auto;
-  display: flex; align-items: center;
-  gap: clamp(4px, 0.8vw, 7px);
-  color: var(--no-green-dim);
+  color: var(--no-control-text-off);
   font-size: clamp(9px, 1.6vmin, 13px);
-  letter-spacing: 0.03em;
-  white-space: nowrap;
-  cursor: pointer;
+  letter-spacing: 0.25em;
+  white-space: nowrap; overflow: hidden;
 }
-.atc-track-label input[type="checkbox"] { accent-color: var(--no-green); cursor: pointer; }
-.atc-track-label input[type="checkbox"]:disabled { cursor: not-allowed; }
-.atc-track-label:has(input:disabled) { color: var(--no-green-dark); cursor: not-allowed; }
+.atc-selected .atc-sel-name { font-size: 1.4em; letter-spacing: 0.1em; overflow: hidden; text-overflow: ellipsis; }
+.atc-selected .f-friendly { color: var(--no-friendly-blue); }
+.atc-selected .f-enemy    { color: var(--no-red); }
+.atc-selected .f-neutral  { color: var(--no-label); }
+.atc-selected .atc-sel-sub  { letter-spacing: 0.05em; color: var(--no-label); overflow: hidden; text-overflow: ellipsis; }
+.atc-selected .atc-none { color: var(--no-green-dark); }
+.atc-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(4px, 1vw, 10px); }
+@container atc-footer (max-width: 520px) { .atc-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.atc-action {
+  font-family: var(--no-font);
+  height: clamp(32px, 6.4vmin, 48px);
+  background: var(--no-bg);
+  color: var(--no-label);
+  border: 1px solid var(--no-label);
+  border-radius: 4px;
+  font-size: clamp(9px, 1.7vmin, 15px);
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  white-space: nowrap; overflow: hidden;
+}
+.atc-action:active { background: rgba(var(--no-green-rgb), 0.08); }
+.atc-action:disabled { opacity: 0.35; cursor: not-allowed; }
+.atc-action:focus-visible { outline: 2px solid var(--no-amber); outline-offset: 2px; }
+#status-btn { color: var(--no-green); border-color: var(--no-green); }
+#status-btn[aria-expanded="true"] { background: rgba(var(--no-green-rgb), 0.10); border-width: 2px; }
+.atc-caret { font-size: 0.6em; line-height: 1; }
+.atc-clear { color: var(--no-red); border-color: var(--no-red); }
+/* TRACK ON MAP is a lit pushbutton (shared/lit-panel.css); only its size is set here. */
+.atc-track { --lamp-w: 2.4em; gap: clamp(3px, 0.6vmin, 6px); font-size: clamp(9px, 1.7vmin, 15px); letter-spacing: 0.15em; }
+.atc-track:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ── The open STATUS list — a panel over the table, rising from the action bar ──────────── */
+.atc-scrim { position: fixed; inset: 0; z-index: 9; background: rgba(0, 0, 0, 0.55); }
+.atc-scrim[hidden] { display: none; }
+.atc-status-menu {
+  position: fixed;
+  z-index: 10;
+  left: clamp(34px, 5vw, 48px);
+  width: min(560px, calc(100vw - 2 * clamp(34px, 5vw, 48px)));
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  padding: clamp(8px, 1.6vmin, 14px);
+  background: var(--no-bg);
+  border: 1px solid var(--no-green);
+  border-radius: 6px;
+  box-shadow: 0 0 24px rgba(var(--no-green-rgb), 0.18);
+  display: flex; flex-direction: column; gap: clamp(6px, 1.2vmin, 10px);
+  scrollbar-width: thin;
+  scrollbar-color: var(--no-gray) transparent;
+}
+.atc-status-menu[hidden] { display: none; }
+.atc-status-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.atc-status-head span:last-child { font-size: clamp(11px, 2vmin, 16px); letter-spacing: 0.12em; }
+.atc-status-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(3px, 0.7vw, 6px); }
+@media (max-width: 440px) { .atc-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.atc-status-item {
+  --lamp-w: 2em;
+  gap: clamp(3px, 0.6vmin, 6px);
+  height: clamp(34px, 6.8vmin, 52px);
+  font-size: clamp(9px, 1.7vmin, 14px);
+  letter-spacing: 0.06em;
+}
+.atc-status-item.emergency { grid-column: span 2; color: var(--no-red); }
+.atc-status-item.emergency.on { color: var(--no-white); }
 
 /* No-mission state — shared .mfd-empty (theme.css), same convention MAP/other simple pages use. */
 #no-mission { display: none; }
