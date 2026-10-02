@@ -8,9 +8,9 @@ namespace AtcModule
     // this mod exists. The traffic table, range presets, and ATC Status assignment/MAP
     // integration (AtcStatus.cs) — see docs/atc-mfd-plan.md.
     [BepInPlugin("com.roque.atc-module", "NOXMFD: ATC Module Extension", MyPluginInfo.PLUGIN_VERSION)]
-    // Pinned to 0.52.0 — the release that added SetUnitColorOverride/ClearUnitColorOverride,
-    // SetSelectedUnit, and the "ac"/"pf" contact fields Phase 2 depends on
-    // (docs/atc-mfd-plan.md), per EXTENSIONS.md's Versioning section.
+    // Pinned to 0.52.4 — the release that added SetSelectedUnitTrack (TRACK ON MAP).
+    // SetUnitColorOverride/ClearUnitColorOverride, SetSelectedUnit and the "ac"/"pf" contact fields
+    // go back to 0.52.0 (docs/atc-mfd-plan.md), per EXTENSIONS.md's Versioning section.
     [BepInDependency("com.roque.NOXMFD", "0.52.4")]
     [BepInProcess("NuclearOption.exe")]
     [BepInProcess("NuclearOptionServer.exe")]

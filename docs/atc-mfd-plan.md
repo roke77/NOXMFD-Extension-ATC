@@ -215,7 +215,7 @@ exploration). Layout-verified against synthetic data. Not yet checked in-game.
 |---|---|
 | [`src/plugin/Plugin.cs`](../src/plugin/Plugin.cs) | Registers the **ATC** EXT page with a command handler (`AtcStatus.HandleCommand`). `BepInDependency` pinned to NOXMFD `0.52.4` — the release `Api.SetSelectedUnitTrack` (TRACK ON MAP) shipped in; `SetUnitColorOverride`/`ClearUnitColorOverride`/`SetSelectedUnit` and the `"ac"`/`"pf"` contact fields go back to `0.52.0`. |
 | [`src/plugin/AtcStatus.cs`](../src/plugin/AtcStatus.cs) | The session-only `unitId → status` map (decision 3), the `set-status`/`locate`/`track` command handlers, the push back to every connected pane via `NOXMFD.Api.PublishSlice`, and the MAP status ring (`Api.SetUnitColorOverride`/`ClearUnitColorOverride`, decision 6), LOCATE ON MAP (`Api.SetSelectedUnit`, decision 7), and TRACK ON MAP (`Api.SetSelectedUnitTrack`) calls. |
-| [`src/web/atc.js`](../src/web/atc.js) | Opens its own `TelemetrySource` (see [Telemetry wiring](#telemetry-wiring)), renders the table (sorted by distance, faction-tinted per TGT's own convention, filtered to `u.ac` aircraft), range-preset filtering with Metric/Imperial labels (decision 8), the FRIENDLY / ENEMY toggles (decision 4), the STATUS list (`openStatusMenu`) opened from the action bar, row selection (which also fires LOCATE ON MAP), the TRACK ON MAP button, and posts status/locate/track commands to `/ext/atc/command`. |
+| [`src/web/atc.js`](../src/web/atc.js) | Opens its own `TelemetrySource` (see [Telemetry wiring](#telemetry-wiring)), renders the table (sorted by distance, faction-tinted per TGT's own convention, filtered to `u.ac` aircraft), range-preset filtering with Metric/Imperial labels (decision 8), the friendly-only filter (decision 4 as amended in the UI rework), the STATUS list (`openStatusMenu`) opened from the action bar, row selection (which sends `locate`), the TRACK ON MAP button, and posts status/locate/track commands to `/ext/atc/command`. |
 | [`src/web/atc.html`](../src/web/atc.html) / [`atc.css`](../src/web/atc.css) | The page itself — the AIR TRAFFIC CONTROL header, lit RANGE and SHOW buttons, the table (STATUS is a badge), the action bar for the selected aircraft, the STATUS list panel, and a shared `.mfd-empty` no-mission state. |
 | [`lib/NOXMFD.dll`](../lib/NOXMFD.dll) | Committed prebuilt reference, updated to NOXMFD `0.52.4`. |
 
@@ -248,12 +248,13 @@ strips, list + detail) after a player asked to see the callsigns of everyone run
   contact's `pn` is the callsign and `psn` the Steam name. The table shows the callsign with the Steam
   name beneath; a friendly pilot with a name but no `psn` shows NO CALLSIGN. A callsign is only
   broadcast within a faction, so enemies show their game name and no second line.
-- **TYPE** is read from the `[type]` suffix NOXMFD puts on a renamed pilot's unit name (`u.t`), else
-  the unit name for a named pilot; AI units show `—` since their name is the type.
+- **TYPE** is read from the `[type]` suffix of a pilot's unit name (`u.t`); an AI unit's name is its
+  type, so that is shown whole.
 - **Actions** sit in a bar under the table, for the selected aircraft: STATUS (opens a list of the 11
-  statuses, rising over the dimmed table), CLEAR STATUS (sends `UNKNOWN`), LOCATE ON MAP, TRACK ON MAP.
+  statuses, rising over the dimmed table), CLEAR STATUS (sends `UNKNOWN`), TRACK ON MAP. There is no separate LOCATE ON MAP button; selecting a row sends `locate`.
   The per-row dropdown is gone; a row shows the status as a badge in the MAP ring's colours.
-- **SHOW** is a FRIENDLY and an ENEMY toggle; neutrals show only while both are on.
+- **Friendly traffic only.** The ATC office doesn't work enemy or neutral aircraft, so the page lists only
+  `f === 1` and the SHOW filter is gone (supersedes decision 4's all-factions table).
 - **RANGE** buttons are 5 / 10 / 25 / 50 / 100 / ALL in either unit; the unit label follows `metric`
   and the filter is the number in km or nm (supersedes decision 8's converted NM labels).
 - `tools/preview.py` previews the page with mock traffic (`python tools/preview.py [port]`).

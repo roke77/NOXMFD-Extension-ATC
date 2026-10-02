@@ -1,6 +1,6 @@
 /* ATC page (docs/atc-mfd-plan.md). "Lit Panel" look shared with NOXMFD's TGT and HUD pages: lamp
-   pushbuttons (shared/lit-panel.css), boxed badges, faction-coloured callsigns. Faction accents
-   come from the shared --no-* tokens (colors.css). */
+   pushbuttons (shared/lit-panel.css), boxed badges, friendly-blue callsigns. Colours come from
+   the shared --no-* tokens (colors.css). */
 
 * { box-sizing: border-box; }
 
@@ -38,20 +38,12 @@ html, body {
 .atc-count b { color: var(--no-amber); font-weight: normal; }
 .atc-count i { color: var(--no-squad); font-style: normal; }
 
-/* ── RANGE / SHOW: lit pushbuttons, side by side, stacking in a narrow pane ──────────────── */
-.atc-filters {
-  flex: 0 0 auto;
-  display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-  gap: clamp(8px, 2vw, 18px);
-  container: atc-filters / inline-size;
-}
-@container atc-filters (max-width: 460px) { .atc-filters { grid-template-columns: minmax(0, 1fr); } }
+/* ── RANGE: lit pushbuttons ───────────────────────────────────────────────────────────── */
+.atc-filters { flex: 0 0 auto; }
 .atc-filter { display: flex; flex-direction: column; gap: clamp(3px, 0.6vh, 6px); min-width: 0; }
 .atc-label { font-size: clamp(8px, 1.4vmin, 12px); letter-spacing: 0.3em; color: var(--no-control-text-off); }
 .atc-btn-row { display: grid; gap: clamp(3px, 0.7vw, 6px); }
 .atc-range { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-.atc-show  { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .atc-btn {
   --lamp-w: 2.1em;
   gap: clamp(3px, 0.6vmin, 7px);
@@ -128,9 +120,7 @@ html, body {
   overflow: hidden; text-overflow: ellipsis;
 }
 .atc-c-name i.plain { color: var(--no-control-text-off); }
-.atc-row.f-friendly .atc-c-name b { color: var(--no-friendly-blue); }
-.atc-row.f-neutral  .atc-c-name b { color: var(--no-label); }
-.atc-row.f-enemy    .atc-c-name b { color: var(--no-red); }
+.atc-c-name b { color: var(--no-friendly-blue); }
 /* A pilot running NOXMFD (their callsign is the name, with the Steam name beneath) reads bold. */
 .atc-row.noxmfd .atc-c-name b { font-weight: bold; }
 .atc-c-type { color: var(--no-label); font-size: 0.88em; }
@@ -181,13 +171,11 @@ html, body {
   white-space: nowrap; overflow: hidden;
 }
 .atc-selected .atc-sel-name { font-size: 1.4em; letter-spacing: 0.1em; overflow: hidden; text-overflow: ellipsis; }
-.atc-selected .f-friendly { color: var(--no-friendly-blue); }
-.atc-selected .f-enemy    { color: var(--no-red); }
-.atc-selected .f-neutral  { color: var(--no-label); }
+.atc-selected .atc-sel-name { color: var(--no-friendly-blue); }
 .atc-selected .atc-sel-sub  { letter-spacing: 0.05em; color: var(--no-label); overflow: hidden; text-overflow: ellipsis; }
 .atc-selected .atc-none { color: var(--no-green-dark); }
-.atc-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(4px, 1vw, 10px); }
-@container atc-footer (max-width: 520px) { .atc-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.atc-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(4px, 1vw, 10px); }
+@container atc-footer (max-width: 420px) { .atc-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .atc-action {
   font-family: var(--no-font);
   height: clamp(32px, 6.4vmin, 48px);

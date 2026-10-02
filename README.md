@@ -8,7 +8,7 @@ Adds an **ATC** page under [NOXMFD](https://github.com/roke77/NOXMFD)'s EXT nav 
 traffic-management / flight-progress MFD for a player acting as Air Traffic Control, per
 [issue #89](https://github.com/roke77/NOXMFD/issues/89). The traffic table (callsign with the
 pilot's Steam name, aircraft type, status, altitude, speed, heading, distance and fuel), range
-presets that follow the game's Metric/Imperial setting, FRIENDLY / ENEMY toggles, an ATC Status
+presets that follow the game's Metric/Imperial setting, friendly traffic only, an ATC Status
 assignment for the selected aircraft, a per-unit MAP status ring, and select-to-LOCATE-ON-MAP (plus
 a TRACK ON MAP toggle that keeps MAP following the selected aircraft) are all built — see [`docs/atc-mfd-plan.md`](docs/atc-mfd-plan.md) for the full design and its one
 remaining gap (two-way MAP↔ATC selection sync, left as a future exploration).
@@ -22,10 +22,9 @@ Built entirely through NOXMFD's public extension API — see NOXMFD's
 - `src/plugin/Plugin.cs` — registers the **ATC** EXT page.
 - `src/plugin/AtcPageAssets.cs` — embedded-resource lookup for `src/web/`'s HTML/CSS/JS.
 - `src/plugin/AtcStatus.cs` — the session-only ATC Status assignment map and its command handler.
-- `src/web/atc.{html,css,js}` — the page itself, in NOXMFD's Lit Panel style: lit RANGE and SHOW
-  (FRIENDLY / ENEMY) buttons, the traffic table (callsign with the pilot's Steam name beneath, type,
+- `src/web/atc.{html,css,js}` — the page itself, in NOXMFD's Lit Panel style: lit RANGE buttons, the traffic table (callsign with the pilot's Steam name beneath, type,
   status badge, ALT / SPD / HDG / DIST / FUEL), and an action bar for the selected aircraft: STATUS
-  (opens a list of the 11 statuses), CLEAR STATUS, LOCATE ON MAP and TRACK ON MAP.
+  (opens a list of the 11 statuses), CLEAR STATUS and TRACK ON MAP.
 - `tools/preview.py` — browser preview with mock traffic, no game needed
   (`python tools/preview.py [port]`).
 - `docs/` — planning doc (design decisions, phasing, what's built) — see

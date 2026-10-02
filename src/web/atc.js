@@ -14,11 +14,9 @@ const countEl = $('count');
 const selectedLineEl = $('selected-line');
 const rangeBtnsEl = $('range-btns');
 const rangeUnitEl = $('range-unit');
-const factionBtnsEl = $('faction-btns');
 const statusBtnEl = $('status-btn');
 const statusBtnLabelEl = $('status-btn-label');
 const clearBtnEl = $('clear-btn');
-const locateBtnEl = $('locate-btn');
 const trackBtnEl = $('track-btn');
 const statusMenuEl = $('status-menu');
 const statusMenuNameEl = $('status-menu-name');
@@ -32,16 +30,14 @@ const STATUS_VALUES = ['PARKED', 'TAXI', 'TAKEOFF', 'DEPARTURE', 'ENROUTE', 'HOL
 // Badge / lamp colour per status, matching the MAP ring (AtcStatus.cs ColorFor).
 const STATUS_ACCENT = { HOLDING: 'var(--no-amber)', EMERGENCY: 'var(--no-red)' };
 
-let lastFrame = null;      // the raw frame from the last onFrame — re-rendered on a filter change too
+let lastFrame = null;      // the raw frame from the last onFrame — re-rendered on a range change too
 let rangePreset = 0;       // the RANGE button's number, 0 = ALL — km or nm, per the frame's `metric`
-let showFriendly = true;   // SHOW toggles — neutrals only ever show while both are on
-let showEnemy = true;
 let rangeMetric = null;    // unit the RANGE labels currently show (frame's `metric`); null = not drawn yet
 let selectedId = 0;        // 0 = nothing selected
 let statusById = {};       // unitId -> status string, from this extension's own published slice
 let trackOn = false;       // TRACK ON MAP state, mirrored to NOXMFD via the 'track' command
 let menuOpen = false;
-let lastContacts = {};     // unitId -> contact, every aircraft in the frame (before the filters)
+let lastContacts = {};     // unitId -> contact, every friendly aircraft in the frame (before the range filter)
 let lastRowsHtml = '';     // what the list currently shows, so an identical frame skips the rebuild
 let pressing = false;      // a pointer is down on the list: a rebuild now would swallow its click
 
@@ -51,8 +47,7 @@ function fmtHdg(deg) {
 
 // u.pf is -1 for "no data" (docs/atc-mfd-plan.md decision 5 / NOXMFD's docs/atc-extension-support.md
 // item 1) — a peer-broadcast value, only ever present for a faction-mate whose own NOXMFD instance
-// is both running and within the broadcast's freshness window; an enemy contact can never carry
-// one at all (FuelBroadcast only reaches the local player's own faction roster in the first place).
+// is both running and within the broadcast's freshness window.
 function fmtFuel(pf) {
   return typeof pf === 'number' && pf >= 0 ? Math.round(pf * 100) + '%' : '—';
 }
@@ -60,15 +55,12 @@ function fuelClass(pf) {
   return typeof pf !== 'number' || pf < 0 ? 'none' : pf < 0.15 ? 'low' : pf < 0.30 ? 'warn' : '';
 }
 
-function factionClass(f) {
-  return f === 1 ? 'f-friendly' : f === 2 ? 'f-enemy' : 'f-neutral';
-}
-
-// u.t is the unit's name: a pilot's aircraft is "<callsign> [<type>]" (NOXMFD renames it, see its
-// docs/squad-callsign-names.md), an AI unit is just its type name.
+// u.t is the unit's name: a pilot's aircraft is "<name> [<type>]" (the game's own label, which
+// NOXMFD rewrites to the callsign, see its docs/squad-callsign-names.md); an AI unit's name is its
+// type.
 function aircraftType(u) {
   const m = /\[(.+)\]\s*$/.exec(u.t || '');
-  return m ? m[1] : u.pn ? u.t : '';
+  return m ? m[1] : u.t || '';
 }
 
 // The RANGE presets are one set of round numbers; the unit follows the player's Metric/Imperial
@@ -89,15 +81,6 @@ rangeBtnsEl.addEventListener('click', (e) => {
   render();
 });
 
-factionBtnsEl.addEventListener('click', (e) => {
-  const btn = e.target.closest('.atc-btn');
-  if (!btn) return;
-  btn.classList.toggle('on');
-  showFriendly = factionBtnsEl.querySelector('[data-faction="friendly"]').classList.contains('on');
-  showEnemy = factionBtnsEl.querySelector('[data-faction="enemy"]').classList.contains('on');
-  render();
-});
-
 function postCommand(payload) {
   // NOXMFD's command endpoint requires an exact application/json Content-Type (CommandContentType.
   // IsJson) — fetch() defaults an unadorned string body to text/plain, which the server 415s.
@@ -114,8 +97,7 @@ function postCommand(payload) {
   }, (err) => console.warn('[ATC] command failed:', payload.cmd, err && err.message));
 }
 
-// Selecting a row doubles as LOCATE ON MAP — a newly selected row (not a click that just
-// deselects) also asks MAP to jump to it. Deselecting drops TRACK ON MAP too: "keep following the
+// A newly selected row (not a click that just deselects) asks MAP to jump to it (`locate`). Deselecting drops TRACK ON MAP too: "keep following the
 // selected unit" has no meaning once nothing is selected.
 function selectRow(id) {
   const newlySelected = selectedId !== id && id !== 0;
@@ -196,7 +178,6 @@ statusGridEl.addEventListener('click', (e) => {
   if (item && selectedId) setStatus(selectedId, item.dataset.status);
 });
 clearBtnEl.addEventListener('click', () => { if (selectedId) setStatus(selectedId, 'UNKNOWN'); });
-locateBtnEl.addEventListener('click', () => { if (selectedId) postCommand({ cmd: 'locate', id: selectedId }); });
 trackBtnEl.addEventListener('click', () => {
   if (!selectedId) return;
   trackOn = !trackOn;
@@ -218,12 +199,12 @@ function updateFooter() {
     closeStatusMenu();
   } else {
     const sub = u.psn || aircraftType(u);
-    selectedLineEl.innerHTML = 'SELECTED <span class="atc-sel-name ' + factionClass(u.f) + '">' + escapeHtml(u.pn || u.t) + '</span>' +
+    selectedLineEl.innerHTML = 'SELECTED <span class="atc-sel-name">' + escapeHtml(u.pn || u.t) + '</span>' +
       (sub ? '<span class="atc-sel-sub">' + escapeHtml(sub) + '</span>' : '');
     statusBtnLabelEl.textContent = 'STATUS · ' + (status === 'UNKNOWN' ? 'NONE' : status);
     if (menuOpen) refreshStatusMenu(u);
   }
-  for (const b of [statusBtnEl, clearBtnEl, locateBtnEl, trackBtnEl]) b.disabled = !u;
+  for (const b of [statusBtnEl, clearBtnEl, trackBtnEl]) b.disabled = !u;
   clearBtnEl.disabled = !u || status === 'UNKNOWN';
   trackBtnEl.classList.toggle('on', !!u && trackOn);
   trackBtnEl.setAttribute('aria-pressed', String(!!u && trackOn));
@@ -232,10 +213,8 @@ function updateFooter() {
 function rowHtml(u, dist, metric) {
   const status = statusById[u.id] || 'UNKNOWN';
   // A pilot running NOXMFD arrives under their callsign with their Steam name in `psn`; a friendly
-  // pilot with a name but no `psn` isn't running it. Enemies never carry a callsign (it is only
-  // broadcast within a faction), so they get no second line.
-  const sub = u.psn ? '<i>' + escapeHtml(u.psn) + '</i>'
-    : u.f === 1 && u.pn ? '<i class="plain">NO CALLSIGN</i>' : '';
+  // pilot with a name but no `psn` isn't running it.
+  const sub = u.psn ? '<i>' + escapeHtml(u.psn) + '</i>' : u.pn ? '<i class="plain">NO CALLSIGN</i>' : '';
   const type = aircraftType(u);
   const accent = status === 'EMERGENCY' ? ' emergency' : status === 'HOLDING' ? ' holding' : status === 'UNKNOWN' ? ' none' : '';
   return '<span class="atc-c-name"><b>' + escapeHtml(u.pn || u.t) + '</b>' + sub + '</span>' +
@@ -258,9 +237,8 @@ function render() {
   const contactsById = {};
   const rows = [];
   for (const u of contacts) {
-    if (!u.ac) continue;
-    contactsById[u.id] = u;   // before the filters: the footer still names a filtered-out selection
-    if (u.f === 1 ? !showFriendly : u.f === 2 ? !showEnemy : !(showFriendly && showEnemy)) continue;
+    if (!u.ac || u.f !== 1) continue;   // ATC works the player's own faction's aircraft only
+    contactsById[u.id] = u;   // before the range filter: the footer still names an out-of-range selection
     let dist = null;
     if (world) {
       const dx = u.x - world.x, dz = u.z - world.z;
@@ -277,7 +255,7 @@ function render() {
   // the list (the rebuild would replace the element under the press and drop its click), leaves the
   // list alone. Upgrade path for very busy missions: update rows in place, keyed by unit id.
   const html = rows.map(({ u, dist }) =>
-    '<div class="atc-row ' + factionClass(u.f) + (u.psn ? ' noxmfd' : '') + (u.id === selectedId ? ' selected' : '') +
+    '<div class="atc-row' + (u.psn ? ' noxmfd' : '') + (u.id === selectedId ? ' selected' : '') +
     '" data-id="' + u.id + '">' + rowHtml(u, dist, d.metric) + '</div>').join('');
   if (html !== lastRowsHtml && !pressing) {
     rowsEl.innerHTML = html;
