@@ -213,7 +213,7 @@ html, body {
 .atc-track:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* ── The open STATUS list — a panel over the table, rising from the action bar ──────────── */
-.atc-scrim { position: fixed; inset: 0; z-index: 9; background: rgba(0, 0, 0, 0.55); }
+.atc-scrim { position: fixed; inset: 0; z-index: 9; background: var(--no-scrim-deep); }
 .atc-scrim[hidden] { display: none; }
 .atc-status-menu {
   position: fixed;
