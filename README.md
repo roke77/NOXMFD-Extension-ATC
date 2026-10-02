@@ -13,6 +13,12 @@ assignment for the selected aircraft, a per-unit MAP status ring, and select-to-
 a TRACK ON MAP toggle that keeps MAP following the selected aircraft) are all built — see [`docs/atc-mfd-plan.md`](docs/atc-mfd-plan.md) for the full design and its one
 remaining gap (two-way MAP↔ATC selection sync, left as a future exploration).
 
+![The ATC page: the traffic table with a selected aircraft](docs/images/atc-page.png)
+
+Pick an aircraft, then **STATUS** opens a list of statuses to assign it:
+
+![The STATUS list open over the table](docs/images/atc-status-list.png)
+
 Built entirely through NOXMFD's public extension API — see NOXMFD's
 [`EXTENSIONS.md`](https://github.com/roke77/NOXMFD/blob/main/EXTENSIONS.md). This repo does
 **not** modify NOXMFD's own source.
@@ -27,6 +33,7 @@ Built entirely through NOXMFD's public extension API — see NOXMFD's
   (opens a list of the 11 statuses), CLEAR STATUS and TRACK ON MAP.
 - `tools/preview.py` — browser preview with mock traffic, no game needed
   (`python tools/preview.py [port]`).
+- `tools/shot.py` — captures the two screenshots above from that preview (headless Chrome).
 - `docs/` — planning doc (design decisions, phasing, what's built) — see
   [`atc-mfd-plan.md`](docs/atc-mfd-plan.md).
 - `lib/NOXMFD.dll` — compile-time reference only, not shipped to players (NOXMFD is already

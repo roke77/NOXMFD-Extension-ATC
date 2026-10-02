@@ -5,7 +5,7 @@
 Serves /ext/atc/* from this repo's src/web, /assets/shared|services/* from a NOXMFD checkout
 (default: a sibling ../NOXMFD), and a mock /stream of traffic contacts with an ext.atc status slice.
 POST /ext/atc/command applies set-status to that slice; GET /commands lists what was received.
-GET /scenario?metric=0|1&s=traffic|nomission switches what the stream sends.
+GET /scenario?metric=0|1&freeze=0|1&s=traffic|nomission switches what the stream sends.
 """
 import json, math, sys, time
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -27,11 +27,14 @@ TRAFFIC = [
     (104, "T/A-30 Compass", 1, 0.4, 0.2, "BoxOfFrogs", "", "0 ft", "0 kt", 270, -1),
     (105, "CI-22 Cricket", 1, 22.0, -9.0, "", "", "1,200 ft", "95 kt", 330, -1),
     (106, "EW-25 Medusa", 1, 41.0, 15.0, "HAWK 3-4", "nightjar", "25,000 ft", "410 kt", 12, 0.09),
+    (107, "FS-12 Revoker", 1, 0.9, 0.3, "SABRE 1-1", "wingnut", "600 ft", "160 kt", 90, 0.97),
+    (108, "KR-67 Ifrit", 1, 14.0, -8.0, "TALON 2-2", "Pipistrelle", "8,000 ft", "280 kt", 140, 0.24),
     (201, "FS-20 Vortex", 2, 58.0, 30.0, "Gr1mReaper", "", "18,000 ft", "520 kt", 220, -1),
     (202, "KR-67 Ifrit", 2, 75.0, -20.0, "", "", "9,000 ft", "480 kt", 250, -1),
 ]
-state = {"s": "traffic", "metric": False}
-status = {"101": "ENROUTE", "102": "ENROUTE", "104": "TAXI", "106": "EMERGENCY"}
+state = {"s": "traffic", "metric": False, "freeze": False}
+status = {"101": "ENROUTE", "102": "ENROUTE", "103": "APPROACH", "104": "TAXI", "106": "EMERGENCY",
+          "107": "TAKEOFF", "108": "HOLDING"}
 commands = []
 
 
@@ -39,6 +42,7 @@ def frame(t):
     contacts = []
     for (uid, typ, f, dx, dz, pn, psn, al, sp, h, pf) in TRAFFIC:
         # drift along the heading so the table visibly updates
+        t = 0 if state["freeze"] else t   # freeze=1: a still frame for the README screenshots
         r = math.radians(h)
         x, z = dx * 1000 + math.sin(r) * t * 30, dz * 1000 + math.cos(r) * t * 30
         c = {"id": uid, "t": f"{pn} [{typ}]" if pn else typ, "f": f, "x": x, "z": z, "h": h, "ac": 1, "hd": 1,
@@ -82,6 +86,7 @@ class H(BaseHTTPRequestHandler):
             q = parse_qs(u.query)
             state["s"] = q.get("s", [state["s"]])[0]
             state["metric"] = q.get("metric", ["1" if state["metric"] else "0"])[0] == "1"
+            state["freeze"] = q.get("freeze", ["1" if state["freeze"] else "0"])[0] == "1"
             return self._json(state)
         if path == "/commands":
             return self._json(commands)
