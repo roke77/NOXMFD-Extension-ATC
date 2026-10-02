@@ -41,6 +41,9 @@ let selectedId = 0;        // 0 = nothing selected
 let statusById = {};       // unitId -> status string, from this extension's own published slice
 let trackOn = false;       // TRACK ON MAP state, mirrored to NOXMFD via the 'track' command
 let menuOpen = false;
+let lastContacts = {};     // unitId -> contact, every aircraft in the frame (before the filters)
+let lastRowsHtml = '';     // what the list currently shows, so an identical frame skips the rebuild
+let pressing = false;      // a pointer is down on the list: a rebuild now would swallow its click
 
 function fmtHdg(deg) {
   return Math.round(((deg % 360) + 360) % 360) + '°';
@@ -128,6 +131,9 @@ function selectRow(id) {
   render();
 }
 
+rowsEl.addEventListener('pointerdown', () => { pressing = true; });
+// Released after the click that follows the pointerup has been dispatched.
+for (const ev of ['pointerup', 'pointercancel']) window.addEventListener(ev, () => setTimeout(() => { pressing = false; }, 0));
 rowsEl.addEventListener('click', (e) => {
   const row = e.target.closest('.atc-row');
   if (row) selectRow(Number(row.dataset.id));
@@ -195,15 +201,13 @@ trackBtnEl.addEventListener('click', () => {
   if (!selectedId) return;
   trackOn = !trackOn;
   postCommand({ cmd: 'track', on: trackOn });
-  updateFooter(lastContacts);
+  updateFooter();
 });
 // A click on the dimmed table, Escape, or a resize (the panel is placed against the action bar once)
 // closes the list without a change.
 scrimEl.addEventListener('click', closeStatusMenu);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeStatusMenu(); });
 window.addEventListener('resize', closeStatusMenu);
-
-let lastContacts = {};     // unitId -> contact, every aircraft in the frame (before the filters)
 
 function updateFooter() {
   const u = selectedId ? lastContacts[selectedId] : null;
@@ -268,15 +272,16 @@ function render() {
   rows.sort((a, b) => (a.dist ?? Infinity) - (b.dist ?? Infinity));
   lastContacts = contactsById;
 
-  // ponytail: rebuilds the whole row list on every ~10 Hz telemetry frame — fine for plain text.
-  // A real fix would reuse row elements by id instead of wiping the list every frame.
-  rowsEl.textContent = '';
-  for (const { u, dist } of rows) {
-    const row = document.createElement('div');
-    row.className = 'atc-row ' + factionClass(u.f) + (u.psn ? ' noxmfd' : '') + (u.id === selectedId ? ' selected' : '');
-    row.dataset.id = u.id;
-    row.innerHTML = rowHtml(u, dist, d.metric);
-    rowsEl.appendChild(row);
+  // ponytail: every changed frame (~10 Hz) rewrites the whole list in one innerHTML assignment —
+  // fine for a few dozen rows. A frame that changes nothing, or arrives while a pointer is down on
+  // the list (the rebuild would replace the element under the press and drop its click), leaves the
+  // list alone. Upgrade path for very busy missions: update rows in place, keyed by unit id.
+  const html = rows.map(({ u, dist }) =>
+    '<div class="atc-row ' + factionClass(u.f) + (u.psn ? ' noxmfd' : '') + (u.id === selectedId ? ' selected' : '') +
+    '" data-id="' + u.id + '">' + rowHtml(u, dist, d.metric) + '</div>').join('');
+  if (html !== lastRowsHtml && !pressing) {
+    rowsEl.innerHTML = html;
+    lastRowsHtml = html;
   }
   emptyEl.style.display = rows.length ? 'none' : '';
 
