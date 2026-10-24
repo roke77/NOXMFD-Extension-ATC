@@ -23,23 +23,6 @@ Built entirely through NOXMFD's public extension API — see NOXMFD's
 [`EXTENSIONS.md`](https://github.com/roke77/NOXMFD/blob/main/EXTENSIONS.md). This repo does
 **not** modify NOXMFD's own source.
 
-## What's here
-
-- `src/plugin/Plugin.cs` — registers the **ATC** EXT page.
-- `src/plugin/AtcPageAssets.cs` — embedded-resource lookup for `src/web/`'s HTML/CSS/JS.
-- `src/plugin/AtcStatus.cs` — the session-only ATC Status assignment map and its command handler.
-- `src/web/atc.{html,css,js}` — the page itself, in NOXMFD's Lit Panel style: lit RANGE buttons, the traffic table (callsign with the pilot's Steam name beneath, type,
-  status badge, ALT / SPD / HDG / DIST / FUEL), and an action bar for the selected aircraft: STATUS
-  (opens a list of the 11 statuses), CLEAR STATUS and TRACK ON MAP.
-- `tools/preview.py` — browser preview with mock traffic, no game needed
-  (`python tools/preview.py [port]`).
-- `tools/shot.py` — captures the two screenshots above from that preview (headless Chrome).
-- `docs/` — planning doc (design decisions, phasing, what's built) — see
-  [`atc-mfd-plan.md`](docs/atc-mfd-plan.md).
-- `lib/NOXMFD.dll` — compile-time reference only, not shipped to players (NOXMFD is already
-  installed as its own plugin; `Private=false` in the `.csproj` keeps this project from bundling a
-  second copy). Committed to this repo since it's this project's own dependency.
-
 ## Building
 
 Requires a local Nuclear Option install with BepInEx 5 and NOXMFD already installed. Create a
