@@ -1,7 +1,7 @@
 # NOXMFD Extension: ATC Module
 
 [![NOXMFD](https://img.shields.io/badge/Requires-NOXMFD%200.78.0%2B-blue)](https://github.com/roke77/NOXMFD)
-![Version](https://img.shields.io/badge/Version-0.3.0-green)
+![Version](https://img.shields.io/badge/Version-0.3.1-green)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Adds an **ATC** page under [NOXMFD](https://github.com/roke77/NOXMFD)'s EXT nav — a
