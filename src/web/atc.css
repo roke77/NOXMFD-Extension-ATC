@@ -19,8 +19,6 @@ html, body {
   display: flex; flex-direction: column;
   gap: clamp(6px, 1.6vh, 14px);
   padding: clamp(6px, 1.8vmin, 16px);
-  padding-left: clamp(34px, 5vw, 48px);
-  padding-right: clamp(34px, 5vw, 48px);
 }
 
 .atc-head {
@@ -206,8 +204,8 @@ html, body {
 .atc-status-menu {
   position: fixed;
   z-index: 10;
-  left: clamp(34px, 5vw, 48px);
-  width: min(560px, calc(100vw - 2 * clamp(34px, 5vw, 48px)));
+  left: clamp(6px, 1.8vmin, 16px);
+  width: min(560px, calc(100vw - 2 * clamp(6px, 1.8vmin, 16px)));
   max-height: calc(100vh - 24px);
   overflow-y: auto;
   padding: clamp(8px, 1.6vmin, 14px);

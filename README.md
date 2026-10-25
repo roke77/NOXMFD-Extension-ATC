@@ -1,6 +1,6 @@
 # NOXMFD Extension: ATC Module
 
-[![NOXMFD](https://img.shields.io/badge/Requires-NOXMFD-blue)](https://github.com/roke77/NOXMFD)
+[![NOXMFD](https://img.shields.io/badge/Requires-NOXMFD%200.78.0%2B-blue)](https://github.com/roke77/NOXMFD)
 ![Version](https://img.shields.io/badge/Version-0.3.0-green)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -44,6 +44,6 @@ The build's `DeployToGame` target copies the built DLL straight into
 
 ## Installing
 
-1. Install BepInEx 5 and [NOXMFD](https://github.com/roke77/NOXMFD).
+1. Install BepInEx 5 and [NOXMFD](https://github.com/roke77/NOXMFD) 0.78.0 or later.
 2. Drop `NOXMFD.AtcModule.dll` into `BepInEx/plugins/`.
 3. Launch the game — an **ATC** entry appears under NOXMFD's EXT nav.
